@@ -3,16 +3,15 @@ package plex
 import (
 	"fmt"
 	"strings"
-	plex_dom "visualsource/plex/internal/dom"
 )
 
-func PrintDom(n plex_dom.Node, indent int) {
+func PrintDom(n Node, indent int) {
 
-	if p, ok := n.(*plex_dom.ElementNode); ok {
+	if p, ok := n.(*ElementNode); ok {
 		fmt.Printf("└-%s %s TAG:%s\n", strings.Repeat("-", indent), p.GetType(), p.GetTagName())
-	} else if p, ok := n.(*plex_dom.TextNode); ok {
+	} else if p, ok := n.(*TextNode); ok {
 		fmt.Printf("└-%s %s TextContent: \"%s\"\n", strings.Repeat("-", indent), p.GetType(), p.GetTextContent())
-	} else if p, ok := n.(*plex_dom.CommentNode); ok {
+	} else if p, ok := n.(*CommentNode); ok {
 		fmt.Printf("└-%s %s TextContent: \"%s\"\n", strings.Repeat("-", indent), p.GetType(), p.GetTextContent())
 	}
 

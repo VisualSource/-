@@ -1,5 +1,11 @@
 package plex
 
+import (
+	"strings"
+
+	mapset "github.com/deckarep/golang-set/v2"
+)
+
 type NodeType string
 
 // https://www.sohamkamani.com/golang/enums/
@@ -57,6 +63,101 @@ type ElementNode struct {
 	children []Node
 	attr     AttributeMap
 	tag_name string
+}
+
+func (n *ElementNode) QuerySelector(selector Selector) (*ElementNode, error) {
+
+	for _, child := range n.children {
+		if child.GetType() == Text || child.GetType() == Comment {
+			continue
+		}
+
+		if p, ok := child.(*ElementNode); ok {
+			if p.Matches(selector) {
+				return p, nil
+			}
+
+			result, err := p.QuerySelector(selector)
+			if err != nil {
+				return nil, err
+			}
+			if result != nil {
+				return result, nil
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+func (n *ElementNode) QuerySelectorAll(selector Selector) []*ElementNode {
+	result := []*ElementNode{}
+
+	for _, child := range n.GetChildren() {
+		if child.GetType() == Text || child.GetType() == Comment {
+			continue
+		}
+
+		if p, ok := child.(*ElementNode); ok {
+
+			if p.Matches(selector) {
+				result = append(result, p)
+			}
+
+			children := p.QuerySelectorAll(selector)
+
+			result = append(result, children...)
+		}
+	}
+
+	return result
+}
+
+func (n *ElementNode) GetTextContent() string {
+
+	textNodes := []*TextNode{}
+
+	for _, v := range n.GetChildren() {
+		if v.GetType() != Text {
+			continue
+		}
+		if node, ok := v.(*TextNode); ok {
+			textNodes = append(textNodes, node)
+		}
+	}
+
+	var output string
+	for _, node := range textNodes {
+		output += node.GetTextContent()
+	}
+
+	return output
+}
+
+func (n *ElementNode) GetId() string {
+	return n.GetAttribute("id")
+}
+
+func (n *ElementNode) GetClassList() mapset.Set[string] {
+	class := n.GetAttribute("class")
+	items := strings.Split(class, " ")
+
+	return mapset.NewSet(items...)
+}
+
+func (n *ElementNode) Matches(selector Selector) bool {
+
+	if selector.id != "" && selector.id == n.GetAttribute("id") {
+		return true
+	}
+
+	if selector.tag_name != "" && selector.tag_name == n.tag_name {
+		return true
+	}
+
+	classes := n.GetClassList()
+
+	return classes.ContainsAny(selector.class...)
 }
 
 func (n *ElementNode) GetTagName() string {
