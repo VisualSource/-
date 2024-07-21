@@ -147,7 +147,7 @@ func (n *ElementNode) GetClassList() mapset.Set[string] {
 
 func (n *ElementNode) Matches(selector Selector) bool {
 
-	if selector.id != "" && selector.id == n.GetAttribute("id") {
+	if selector.id != "" && selector.id == n.GetId() {
 		return true
 	}
 

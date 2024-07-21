@@ -37,12 +37,17 @@ func main() {
 	if doc, ok := dom.(*plex.ElementNode); ok {
 		styleTags := doc.QuerySelectorAll(plex.NewSelector("style", "", []string{}))
 
+		stylesheets := []plex.Stylesheet{}
 		for _, style := range styleTags {
-			css, err := cssParser.Parse(style.GetTextContent())
+			css, err := cssParser.Parse(style.GetTextContent(), 1)
 			if err == nil {
-				fmt.Printf("%v\n", css)
+				stylesheets = append(stylesheets, css)
 			}
 		}
+
+		styletree := plex.StyleTree(&dom, stylesheets)
+
+		fmt.Printf("%v+2", styletree)
 	}
 
 }

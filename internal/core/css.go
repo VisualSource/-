@@ -6,6 +6,12 @@ import (
 	"unicode"
 )
 
+type Specificity struct {
+	a int
+	b int
+	c int
+}
+
 type CssValue interface{}
 
 type Selector struct {
@@ -23,7 +29,7 @@ func NewSelector(tagName string, id string, classlist []string) Selector {
 }
 
 // http://www.w3.org/TR/selectors/#specificity
-func (s *Selector) Specificity() (int, int, int) {
+func (s *Selector) Specificity() Specificity {
 	a := 0
 	c := 0
 
@@ -37,7 +43,7 @@ func (s *Selector) Specificity() (int, int, int) {
 		c++
 	}
 
-	return a, b, c
+	return Specificity{a, b, c}
 }
 
 type Declaration struct {
@@ -46,6 +52,7 @@ type Declaration struct {
 }
 
 type Rule struct {
+	origin      int
 	selectors   []Selector
 	declartions []Declaration
 }
@@ -58,11 +65,11 @@ type CssParser struct {
 	parser Parser
 }
 
-func (p *CssParser) Parse(sheet string) (Stylesheet, error) {
+func (p *CssParser) Parse(sheet string, origin int) (Stylesheet, error) {
 	p.parser.SetInput(sheet)
 	p.parser.SetPos(0)
 
-	rules := p.parseRules()
+	rules := p.parseRules(origin)
 
 	return Stylesheet{
 		rules: rules,
@@ -108,7 +115,7 @@ func (p *CssParser) parseIdentifier() string {
 	return string(result)
 }
 
-func (p *CssParser) parseRules() []Rule {
+func (p *CssParser) parseRules(origin int) []Rule {
 	rules := []Rule{}
 
 	for {
@@ -117,7 +124,7 @@ func (p *CssParser) parseRules() []Rule {
 			break
 		}
 
-		rule, err := p.parseRule()
+		rule, err := p.parseRule(origin)
 
 		if err != nil {
 			continue
@@ -129,7 +136,7 @@ func (p *CssParser) parseRules() []Rule {
 	return rules
 }
 
-func (p *CssParser) parseRule() (Rule, error) {
+func (p *CssParser) parseRule(origin int) (Rule, error) {
 	selectors, err := p.parseSelectors()
 
 	if err != nil {
@@ -139,6 +146,7 @@ func (p *CssParser) parseRule() (Rule, error) {
 	declarations := p.parseDeclarations()
 
 	return Rule{
+		origin,
 		selectors,
 		declarations,
 	}, nil
@@ -166,10 +174,10 @@ L:
 	}
 
 	sort.Slice(selectors, func(i, j int) bool {
-		aa, ab, ac := selectors[i].Specificity()
-		ba, bb, bc := selectors[j].Specificity()
+		a := selectors[i].Specificity()
+		b := selectors[j].Specificity()
 
-		return aa > ba || ab > bb || ac > bc
+		return a.a > b.a || a.b > b.b || a.c > b.c
 	})
 
 	return selectors, nil
