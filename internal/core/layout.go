@@ -1,8 +1,14 @@
 package plex
 
-import "github.com/moznion/go-optional"
+// https://github.com/moznion/go-optional
+import (
+	"github.com/moznion/go-optional"
+	"github.com/veandco/go-sdl2/sdl"
+)
 
 type DisplayType = uint8
+
+func ExpanedBy(rect sdl.FRect) {}
 
 const (
 	DisplayNone        DisplayType = 0
@@ -12,24 +18,15 @@ const (
 	DisplayFlex        DisplayType = 4
 )
 
-type Rect struct {
-	x      float64
-	y      float64
-	width  float64
-	height float64
-}
-
-func (r *Rect) expandedBy(edge EdgeSizes) {}
-
 type EdgeSizes struct {
-	left   float64
-	right  float64
-	top    float64
-	bottom float64
+	left   float32
+	right  float32
+	top    float32
+	bottom float32
 }
 
 type Dimensions struct {
-	content Rect
+	content sdl.FRect
 	padding EdgeSizes
 	border  EdgeSizes
 	margin  EdgeSizes
@@ -97,9 +94,9 @@ func (l *LayoutBox) calculateBlockWidth(containing Dimensions) {
 		return
 	}
 
-	style := l.node.Unwrap()
-	var keywordAuto CssValue = "auto"
-	width := style.GetProp("width").Or(optional.Some(keywordAuto)).Unwrap()
+	//style := l.node.Unwrap()
+	//var keywordAuto CssValue = "auto"
+	//width := style.GetProp("width").Or(optional.Some(keywordAuto)).Unwrap()
 
 }
 func (l *LayoutBox) calculateBlockPosition(containing Dimensions) {}

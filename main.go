@@ -3,9 +3,14 @@ package main
 import (
 	"fmt"
 	plex "visualsource/plex/internal/core"
+
+	"github.com/veandco/go-sdl2/sdl"
 )
 
 func main() {
+
+	sdl.Init(sdl.INIT_EVERYTHING)
+
 	parser := plex.CreateHtmlParser()
 	cssParser := plex.CssParser{}
 
