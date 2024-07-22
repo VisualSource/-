@@ -7,6 +7,8 @@ import (
 )
 
 type PropertyMap = map[string]CssValue
+
+// #region-start StyleNode
 type StyledNode struct {
 	node     *Node
 	props    PropertyMap
@@ -22,6 +24,18 @@ func (n *StyledNode) GetProp(key string) optional.Option[CssValue] {
 	return optional.Some(value)
 }
 
+func (n *StyledNode) GetPropAsLength(key string) optional.Option[CssLengthValue] {
+	value := n.props[key]
+	if value == nil {
+		return nil
+	}
+	if i, ok := value.(CssLengthValue); ok {
+		return optional.Some(i)
+	}
+
+	return nil
+}
+
 func (n *StyledNode) GetDisplay() DisplayType {
 
 	display := n.props["display"]
@@ -29,27 +43,52 @@ func (n *StyledNode) GetDisplay() DisplayType {
 	if item, ok := display.(*string); ok {
 		switch *item {
 		case "block":
-			return DisplayBlock
-		case "inline-block":
-			return DisplayInlineBlock
-		case "flex":
-			return DisplayFlex
+			return DisplayType_Block
 		case "none":
-			return DisplayNone
+			return DisplayType_None
 		case "inline":
 			fallthrough
 		default:
-			return DisplayInline
+			return DisplayType_Inline
 		}
 	}
 
-	return DisplayNone
+	return DisplayType_Inline
+}
+
+func (n *StyledNode) LookupCssLength(props ...string) optional.Option[CssLengthValue] {
+
+	for _, prop := range props {
+		item := n.props[prop]
+
+		if i, ok := item.(*CssLengthValue); ok {
+			return optional.Some(*i)
+		}
+	}
+
+	return nil
+}
+
+func (n *StyledNode) Lookup(props ...string) optional.Option[CssValue] {
+
+	for _, prop := range props {
+		item := n.props[prop]
+
+		if item != nil {
+			return optional.Some(item)
+		}
+
+	}
+
+	return nil
 }
 
 type MatchedRule struct {
 	specificity Specificity
 	rule        Rule
 }
+
+// #region-start utility
 
 func matchRule(el *ElementNode, rule Rule) optional.Option[MatchedRule] {
 

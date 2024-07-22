@@ -3,7 +3,17 @@ package plex
 import (
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"unicode"
+
+	"github.com/veandco/go-sdl2/sdl"
+)
+
+type CssLengthUnit = uint8
+
+const (
+	CssUnit_PX CssLengthUnit = 0
 )
 
 type Specificity struct {
@@ -13,6 +23,19 @@ type Specificity struct {
 }
 
 type CssValue interface{}
+
+type CssLengthValue struct {
+	Value float32
+	Unit  uint8
+}
+
+func (lv *CssLengthValue) ToPx() float32 {
+	if lv.Unit == CssUnit_PX {
+		return lv.Value
+	}
+
+	return 0.0
+}
 
 type Selector struct {
 	tag_name string
@@ -233,9 +256,72 @@ func (p *CssParser) parseDeclaration() (Declaration, error) {
 	}, nil
 }
 
+func (p *CssParser) parseHexPair() (uint8, error) {
+	s := p.parser.input[p.parser.pos : p.parser.pos+2]
+	p.parser.pos += 2
+
+	u8, err := strconv.ParseUint(string(s), 16, 8)
+	if err != nil {
+		return 0, err
+	}
+	return uint8(u8), nil
+}
+
 func (p *CssParser) parseValue() (CssValue, error) {
 
-	result := p.parser.ConsumeWhile(func(r rune) bool { return r != ';' })
+	char := p.parser.NextChar()
 
-	return string(result), nil
+	if unicode.IsDigit(char) {
+
+		float := p.parser.ConsumeWhile(func(r rune) bool {
+			return unicode.IsDigit(r) || r == '.'
+		})
+
+		item, err := strconv.ParseFloat(string(float), 32)
+		if err != nil {
+			return nil, err
+		}
+
+		unitStr := strings.ToLower(p.parseIdentifier())
+
+		var unit CssLengthUnit
+		switch unitStr {
+		case "px":
+			unit = CssUnit_PX
+		default:
+			return nil, fmt.Errorf("unrecognized unit")
+		}
+
+		return CssLengthValue{
+			Value: float32(item),
+			Unit:  unit,
+		}, nil
+
+	} else if char == '#' {
+		p.parser.ConsumeChar()
+
+		r, err := p.parseHexPair()
+		if err != nil {
+			return nil, err
+		}
+		g, err := p.parseHexPair()
+		if err != nil {
+			return nil, err
+		}
+		b, err := p.parseHexPair()
+		if err != nil {
+			return nil, err
+		}
+
+		return sdl.Color{
+			A: 255,
+			R: r,
+			G: g,
+			B: b,
+		}, nil
+	}
+
+	ident := p.parseIdentifier()
+
+	return ident, nil
 }
