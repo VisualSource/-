@@ -1,0 +1,39 @@
+&plex.ElementNode {
+  children: []plex.Node [ #len=2,cap=2
+    &plex.ElementNode {
+      children: []plex.Node [ #len=1,cap=1
+        &plex.ElementNode {
+          children: []plex.Node [ #len=1,cap=1
+            &plex.TextNode {
+              children: []plex.Node [ #len=0,cap=0
+              ],
+              content: string("html { display: block; }
+                                        head { display: none; }
+                                        body { display: block; margin: 8px; }
+                                        div  { display: block; margin: 4px; background-color: #00ffff; height: 100px; }
+                                "), #len=186
+            },
+          ],
+          attr: map[string]string { #len=0
+          },
+          tagName: string("style"), #len=5
+        },
+      ],
+      attr: map[string]string { #len=0},
+      tagName: string("head"), #len=4
+    },
+    &plex.ElementNode {
+      children: []plex.Node [ #len=1,cap=1
+        &plex.ElementNode {
+          children: []plex.Node [ #len=0,cap=0],
+          attr: map[string]string { #len=0},
+          tagName: string("div"), #len=3
+        },
+      ],
+      attr: map[string]string { #len=0},
+      tagName: string("body"), #len=4
+	},
+  ],
+  attr: map[string]string { #len=0},
+  tagName: string("html"), #len=4
+},

@@ -10,78 +10,8 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-type CssLengthUnit = uint8
-
-const (
-	CssUnit_PX CssLengthUnit = 0
-)
-
-type Specificity struct {
-	a int
-	b int
-	c int
-}
-
-type CssValue interface{}
-
-type CssLengthValue struct {
-	Value float32
-	Unit  uint8
-}
-
-func (lv *CssLengthValue) ToPx() float32 {
-	if lv.Unit == CssUnit_PX {
-		return lv.Value
-	}
-
-	return 0.0
-}
-
-type Selector struct {
-	tag_name string
-	id       string
-	class    []string
-}
-
-func NewSelector(tagName string, id string, classlist []string) Selector {
-	return Selector{
-		tag_name: tagName,
-		id:       id,
-		class:    classlist,
-	}
-}
-
-// http://www.w3.org/TR/selectors/#specificity
-func (s *Selector) Specificity() Specificity {
-	a := 0
-	c := 0
-
-	if s.id != "" {
-		a++
-	}
-
-	b := len(s.class)
-
-	if s.tag_name != "" {
-		c++
-	}
-
-	return Specificity{a, b, c}
-}
-
-type Declaration struct {
-	name  string
-	value CssValue
-}
-
-type Rule struct {
-	origin      int
-	selectors   []Selector
-	declartions []Declaration
-}
-
-type Stylesheet struct {
-	rules []Rule
+func isValidIdentifier(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_'
 }
 
 type CssParser struct {
@@ -100,7 +30,7 @@ func (p *CssParser) Parse(sheet string, origin int) (Stylesheet, error) {
 }
 
 func (p *CssParser) ParseSelector() Selector {
-	selector := Selector{tag_name: "", id: "", class: []string{}}
+	selector := Selector{}
 
 L:
 	for !p.parser.EOF() {
@@ -109,15 +39,15 @@ L:
 		switch char {
 		case '#':
 			p.parser.ConsumeChar()
-			selector.id = p.parseIdentifier()
+			selector.Id = p.parseIdentifier()
 		case '.':
 			p.parser.ConsumeChar()
-			selector.class = append(selector.class, p.parseIdentifier())
+			selector.Classes = append(selector.Classes, p.parseIdentifier())
 		case '*':
 			p.parser.ConsumeChar()
 		default:
 			if isValidIdentifier(char) {
-				selector.tag_name = p.parseIdentifier()
+				selector.TagName = p.parseIdentifier()
 				continue
 			}
 			break L
@@ -126,10 +56,6 @@ L:
 	}
 
 	return selector
-}
-
-func isValidIdentifier(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_'
 }
 
 func (p *CssParser) parseIdentifier() string {
@@ -200,7 +126,7 @@ L:
 		a := selectors[i].Specificity()
 		b := selectors[j].Specificity()
 
-		return a.a > b.a || a.b > b.b || a.c > b.c
+		return a.A > b.A || a.B > b.B || a.C > b.C
 	})
 
 	return selectors, nil

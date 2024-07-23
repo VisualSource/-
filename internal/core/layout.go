@@ -47,7 +47,7 @@ func (d *Dimensions) PaddingBox() sdl.FRect {
 func (d *Dimensions) BorderBox() sdl.FRect {
 	return ExpanedBy(d.PaddingBox(), d.Border)
 }
-func (d *Dimensions) marginBox() sdl.FRect {
+func (d *Dimensions) MarginBox() sdl.FRect {
 	return ExpanedBy(d.BorderBox(), d.Margin)
 }
 
@@ -68,15 +68,27 @@ type LayoutBox struct {
 	children   []LayoutBox
 }
 
-func (l *LayoutBox) GetInlineContainer() LayoutBox {
+func CreateLayoutBox(dimensions Dimensions, boxType BoxType, node optional.Option[StyledNode], children []LayoutBox) LayoutBox {
+	return LayoutBox{
+		dimensions: dimensions,
+		boxType:    boxType,
+		node:       node,
+		children:   children,
+	}
+}
+
+func (l *LayoutBox) GetInlineContainer() *LayoutBox {
 	switch l.boxType {
 	case BoxType_Inline:
 		fallthrough
 	case BoxType_AnonymousBlock:
-		return *l
+		return l
 	case BoxType_Block:
 
-		if len(l.children) <= 0 {
+		// create anony block if not exists
+		// else create return block
+
+		if len(l.children) <= 0 || l.children[len(l.children)-1].boxType != BoxType_AnonymousBlock {
 			l.children = append(l.children, LayoutBox{
 				boxType: BoxType_AnonymousBlock,
 			})
@@ -84,7 +96,7 @@ func (l *LayoutBox) GetInlineContainer() LayoutBox {
 
 		last := l.children[len(l.children)-1]
 
-		return last
+		return &last
 	}
 
 	panic("Should not be here")
@@ -100,13 +112,13 @@ func (l *LayoutBox) GetLayout(containing Dimensions) {
 }
 
 func (l *LayoutBox) layoutBlock(containing Dimensions) {
-	l.calculateBlockWidth(containing)
-	l.calculateBlockPosition(containing)
-	l.layoutBlockChildren()
-	l.calculateBlockHeight()
+	l.CalculateBlockWidth(containing)
+	l.CalculateBlockPosition(containing)
+	l.LayoutBlockChildren()
+	l.CalculateBlockHeight()
 }
 
-func (l *LayoutBox) calculateBlockWidth(containing Dimensions) {
+func (l *LayoutBox) CalculateBlockWidth(containing Dimensions) {
 	if l.node.IsNone() {
 		return
 	}
@@ -129,11 +141,11 @@ func (l *LayoutBox) calculateBlockWidth(containing Dimensions) {
 	padding_left := style.Lookup("padding-left", "padding").Or(zero).Unwrap()
 	padding_right := style.Lookup("padding-right", "padding").Or(zero).Unwrap()
 
-	totals := [6]CssValue{margin_left, margin_right, border_left, border_right, padding_left, padding_right}
+	totals := [7]CssValue{margin_left, margin_right, border_left, border_right, padding_left, padding_right, width}
 	var total float32 = 0.0
 
 	for _, i := range totals {
-		if length, ok := i.(*CssLengthValue); ok {
+		if length, ok := i.(CssLengthValue); ok {
 			if length.Unit == CssUnit_PX {
 				total += length.Value
 			}
@@ -141,18 +153,18 @@ func (l *LayoutBox) calculateBlockWidth(containing Dimensions) {
 	}
 
 	var isWidthAuto bool = false
-	if item, ok := width.(*string); ok && *item == "auto" {
+	if item, ok := width.(string); ok && item == "auto" {
 		isWidthAuto = true
 	}
 
 	if !isWidthAuto && total > containing.Content.W {
-		if ml, ok := margin_left.(*string); ok && *ml == "auto" {
+		if ml, ok := margin_left.(string); ok && ml == "auto" {
 			margin_left = CssLengthValue{
 				Value: 0.0,
 				Unit:  CssUnit_PX,
 			}
 		}
-		if mr, ok := margin_right.(*string); ok && *mr == "auto" {
+		if mr, ok := margin_right.(string); ok && mr == "auto" {
 			margin_right = CssLengthValue{
 				Value: 0.0,
 				Unit:  CssUnit_PX,
@@ -163,11 +175,11 @@ func (l *LayoutBox) calculateBlockWidth(containing Dimensions) {
 	underflow := containing.Content.W - total
 
 	var isMarginLeftAuto bool = false
-	if ml, ok := margin_left.(*string); ok && *ml == "auto" {
+	if ml, ok := margin_left.(string); ok && ml == "auto" {
 		isMarginLeftAuto = true
 	}
 	var isMarginRightAuto bool = false
-	if mr, ok := margin_right.(*string); ok && *mr == "auto" {
+	if mr, ok := margin_right.(string); ok && mr == "auto" {
 		isMarginRightAuto = true
 	}
 
@@ -234,33 +246,33 @@ func (l *LayoutBox) calculateBlockWidth(containing Dimensions) {
 		}
 	}
 
-	if w, ok := width.(*CssLengthValue); ok {
+	if w, ok := width.(CssLengthValue); ok {
 		l.dimensions.Content.W = w.Value
 	}
 
-	if pl, ok := padding_left.(*CssLengthValue); ok {
+	if pl, ok := padding_left.(CssLengthValue); ok {
 		l.dimensions.Padding.Left = pl.Value
 	}
-	if pr, ok := padding_right.(*CssLengthValue); ok {
+	if pr, ok := padding_right.(CssLengthValue); ok {
 		l.dimensions.Padding.Right = pr.Value
 	}
 
-	if pl, ok := border_left.(*CssLengthValue); ok {
+	if pl, ok := border_left.(CssLengthValue); ok {
 		l.dimensions.Border.Left = pl.Value
 	}
-	if pr, ok := border_right.(*CssLengthValue); ok {
+	if pr, ok := border_right.(CssLengthValue); ok {
 		l.dimensions.Border.Right = pr.Value
 	}
 
-	if pl, ok := margin_left.(*CssLengthValue); ok {
+	if pl, ok := margin_left.(CssLengthValue); ok {
 		l.dimensions.Margin.Left = pl.Value
 	}
-	if pr, ok := margin_right.(*CssLengthValue); ok {
+	if pr, ok := margin_right.(CssLengthValue); ok {
 		l.dimensions.Margin.Right = pr.Value
 	}
 
 }
-func (l *LayoutBox) calculateBlockPosition(containing Dimensions) {
+func (l *LayoutBox) CalculateBlockPosition(containing Dimensions) {
 	if l.node.IsNone() {
 		return
 	}
@@ -283,14 +295,14 @@ func (l *LayoutBox) calculateBlockPosition(containing Dimensions) {
 	l.dimensions.Content.X = containing.Content.X + l.dimensions.Margin.Left + l.dimensions.Border.Left + l.dimensions.Padding.Left
 	l.dimensions.Content.Y = containing.Content.H + containing.Content.Y + l.dimensions.Margin.Top + l.dimensions.Border.Top + l.dimensions.Padding.Top
 }
-func (l *LayoutBox) layoutBlockChildren() {
+func (l *LayoutBox) LayoutBlockChildren() {
 	for _, child := range l.children {
 		child.layoutBlock(l.dimensions)
 
-		l.dimensions.Content.H += child.dimensions.marginBox().H
+		l.dimensions.Content.H += child.dimensions.MarginBox().H
 	}
 }
-func (l *LayoutBox) calculateBlockHeight() {
+func (l *LayoutBox) CalculateBlockHeight() {
 	if l.node.IsNone() {
 		return
 	}
@@ -313,7 +325,7 @@ func getContainerDisplay(display DisplayType) BoxType {
 	case DisplayType_Inline:
 		return BoxType_Inline
 	default:
-		return BoxType_AnonymousBlock
+		panic("root node has display: none")
 	}
 }
 
@@ -333,6 +345,14 @@ func BuildLayoutTree(node StyledNode) LayoutBox {
 			inline.children = append(inline.children, BuildLayoutTree(child))
 		}
 	}
+
+	return root
+}
+
+func LayoutTree(node StyledNode, dim Dimensions) LayoutBox {
+	root := BuildLayoutTree(node)
+
+	root.layoutBlock(dim)
 
 	return root
 }

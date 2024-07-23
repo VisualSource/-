@@ -83,6 +83,14 @@ func (n *StyledNode) Lookup(props ...string) optional.Option[CssValue] {
 	return nil
 }
 
+func CreateStyleNode(node Node, props PropertyMap, children []StyledNode) StyledNode {
+	return StyledNode{
+		node:     &node,
+		props:    props,
+		children: children,
+	}
+}
+
 type MatchedRule struct {
 	specificity Specificity
 	rule        Rule
@@ -93,7 +101,7 @@ type MatchedRule struct {
 func matchRule(el *ElementNode, rule Rule) optional.Option[MatchedRule] {
 
 	for _, selector := range rule.selectors {
-		if el.Matches(selector) {
+		if el.Matches(&selector) {
 			return optional.Some(MatchedRule{
 				specificity: selector.Specificity(),
 				rule:        rule,
@@ -129,7 +137,7 @@ func specifiedValues(el *ElementNode, stylesheets []Stylesheet) PropertyMap {
 		a := rules[i]
 		b := rules[j]
 
-		return a.rule.origin < b.rule.origin || a.specificity.a < b.specificity.a || a.specificity.b < b.specificity.b || a.specificity.c < b.specificity.c
+		return a.rule.origin < b.rule.origin || a.specificity.A < b.specificity.A || a.specificity.B < b.specificity.B || a.specificity.C < b.specificity.C
 	})
 
 	for _, matched := range rules {

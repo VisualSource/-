@@ -4,13 +4,41 @@ import (
 	"fmt"
 	plex "visualsource/plex/internal/core"
 
-	"github.com/veandco/go-sdl2/sdl"
+	"github.com/gookit/goutil/dump"
 )
 
 func main() {
+	dump.Config(func(opts *dump.Options) {
+		opts.MaxDepth = 10
+	})
+
+	parser := plex.HtmlParser{}
+	//cssParser := plex.CssParser{}
+
+	dom, err := parser.Parse(`
+		<html>
+			<head>
+				<style>
+					html { display: block; }
+					head { display: none; }
+					body { display: block; margin: 8px; }
+					div  { display: block; margin: 4px; background-color: #00ffff; height: 100px; }
+				</style>
+			</head>
+			<body>
+				<div></div>
+			</body>
+		</html>
+	`)
+	dump.P(dom)
+	if err != nil {
+		fmt.Printf("DOM parser error: %s\n", err)
+		return
+	}
+
 	// load user agent css styles
 
-	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+	/*if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
 	}
 	defer sdl.Quit()
@@ -25,25 +53,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	parser := plex.CreateHtmlParser()
 	cssParser := plex.CssParser{}
 
 	dom, err := parser.Parse(`
-		<html class="test">
+		<html>
 			<head>
 				<style>
-					h1, h2, h3 { margin: auto; color: #cc0000; }
-					div.note { margin-bottom: 20px; padding: 10px; }
+					html { display: block; }
 					head { display: none; }
-					html { background-color: #ffffff; height: 100px; }
+					body { display: block; margin: 8px; }
+					div  { display: block; margin: 4px; background-color: #00ffff; height: 100px; }
 				</style>
 			</head>
 			<body>
-				<h1>Title</h1>
-				<div id="main" class="test">
-					<!-- great text -->
-					<p>Hello <em>world</em>!</p>
-				</div>
+				<div></div>
 			</body>
 		</html>
 	`)
@@ -67,13 +92,12 @@ func main() {
 		styletree = plex.StyleTree(&dom, stylesheets)
 	}
 
-	layout := plex.BuildLayoutTree(styletree)
+	dim := plex.GetWindowDimentions(window)
+	layout := plex.LayoutTree(styletree, dim)
 
-	plex.RenderLayout(renderer, layout)
+	plex.Print(&layout, renderer, window)
 
-	fmt.Printf("%v\n", layout)
-
-	renderer.Present()
+	fmt.Printf("%#v\n", layout)
 
 	running := true
 	for running {
@@ -85,5 +109,5 @@ func main() {
 			}
 		}
 		sdl.Delay(33)
-	}
+	}*/
 }

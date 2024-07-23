@@ -7,7 +7,7 @@ import (
 
 // https://limpet.net/mbrubeck/2014/08/13/toy-layout-engine-3-css.html
 var OPEN_BRACKET = [1]rune{'<'}
-var CLOSED_BRACKET = [1]rune{'>'}
+var CLOSED_BRACKET = '>'
 var EQUAL = [1]rune{'='}
 var ELEMENT_CLOSED_BRACKET = [2]rune{'<', '/'}
 var COMMENT_START = [4]rune{'<', '!', '-', '-'}
@@ -15,12 +15,6 @@ var COMMENT_END = [3]rune{'-', '-', '>'}
 
 type HtmlParser struct {
 	parser Parser
-}
-
-func CreateHtmlParser() HtmlParser {
-	return HtmlParser{
-		parser: Parser{},
-	}
 }
 
 func (p *HtmlParser) Parse(document string) (Node, error) {
@@ -95,7 +89,7 @@ func (hp *HtmlParser) parseElement() (Node, error) {
 		return nil, err
 	}
 
-	err = hp.parser.Expect(CLOSED_BRACKET[:])
+	err = hp.parser.ExpectRune(CLOSED_BRACKET)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +110,7 @@ func (hp *HtmlParser) parseElement() (Node, error) {
 		return nil, err
 	}
 
-	err = hp.parser.Expect(CLOSED_BRACKET[:])
+	err = hp.parser.ExpectRune(CLOSED_BRACKET)
 	if err != nil {
 		return nil, err
 	}

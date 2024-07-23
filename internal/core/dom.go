@@ -6,13 +6,13 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 )
 
-type NodeType string
+type NodeType uint8
 
 // https://www.sohamkamani.com/golang/enums/
 const (
-	Text    NodeType = "Text"
-	Element NodeType = "Element"
-	Comment NodeType = "Comment"
+	NodeType_Text    NodeType = 0
+	NodeType_Element NodeType = 1
+	NodeType_Comment NodeType = 2
 )
 
 type Node interface {
@@ -23,12 +23,12 @@ type Node interface {
 // #region-start TextNode
 
 type TextNode struct {
-	children []Node
 	content  string
+	children []Node
 }
 
 func (n *TextNode) GetType() NodeType {
-	return Text
+	return NodeType_Text
 }
 
 func (n *TextNode) GetChildren() []Node {
@@ -43,14 +43,9 @@ func (n *TextNode) SetTextContent(value string) {
 	n.content = value
 }
 
-func IsTextNode(n Node) bool {
-	return n.GetType() == Text
-}
-
 func CreateTextNode(textContent string) TextNode {
 	return TextNode{
-		children: []Node{},
-		content:  textContent,
+		content: textContent,
 	}
 }
 
@@ -60,15 +55,15 @@ func CreateTextNode(textContent string) TextNode {
 type AttributeMap = map[string]string
 
 type ElementNode struct {
-	children []Node
+	tagName  string
 	attr     AttributeMap
-	tag_name string
+	children []Node
 }
 
-func (n *ElementNode) QuerySelector(selector Selector) (*ElementNode, error) {
+func (n *ElementNode) QuerySelector(selector *Selector) (*ElementNode, error) {
 
 	for _, child := range n.children {
-		if child.GetType() == Text || child.GetType() == Comment {
+		if child.GetType() == NodeType_Text || child.GetType() == NodeType_Comment {
 			continue
 		}
 
@@ -90,11 +85,11 @@ func (n *ElementNode) QuerySelector(selector Selector) (*ElementNode, error) {
 	return nil, nil
 }
 
-func (n *ElementNode) QuerySelectorAll(selector Selector) []*ElementNode {
+func (n *ElementNode) QuerySelectorAll(selector *Selector) []*ElementNode {
 	result := []*ElementNode{}
 
 	for _, child := range n.GetChildren() {
-		if child.GetType() == Text || child.GetType() == Comment {
+		if child.GetType() == NodeType_Text || child.GetType() == NodeType_Comment {
 			continue
 		}
 
@@ -118,7 +113,7 @@ func (n *ElementNode) GetTextContent() string {
 	textNodes := []*TextNode{}
 
 	for _, v := range n.GetChildren() {
-		if v.GetType() != Text {
+		if v.GetType() != NodeType_Text {
 			continue
 		}
 		if node, ok := v.(*TextNode); ok {
@@ -145,27 +140,27 @@ func (n *ElementNode) GetClassList() mapset.Set[string] {
 	return mapset.NewSet(items...)
 }
 
-func (n *ElementNode) Matches(selector Selector) bool {
+func (n *ElementNode) Matches(selector *Selector) bool {
 
-	if selector.id != "" && selector.id == n.GetId() {
+	if selector.Id != "" && selector.Id == n.GetId() {
 		return true
 	}
 
-	if selector.tag_name != "" && selector.tag_name == n.tag_name {
+	if selector.TagName != "" && selector.TagName == n.tagName {
 		return true
 	}
 
 	classes := n.GetClassList()
 
-	return classes.ContainsAny(selector.class...)
+	return classes.ContainsAny(selector.Classes...)
 }
 
 func (n *ElementNode) GetTagName() string {
-	return n.tag_name
+	return n.tagName
 }
 
 func (n *ElementNode) GetType() NodeType {
-	return Element
+	return NodeType_Element
 }
 
 func (n *ElementNode) GetChildren() []Node {
@@ -190,13 +185,9 @@ func (n *ElementNode) HasAttribute(key string) bool {
 	return ok
 }
 
-func IsElementNode(n Node) bool {
-	return n.GetType() == Element
-}
-
-func CreateElementNode(tag_name string, attrs AttributeMap, children []Node) ElementNode {
+func CreateElementNode(tagName string, attrs AttributeMap, children []Node) ElementNode {
 	return ElementNode{
-		tag_name: tag_name,
+		tagName:  tagName,
 		attr:     attrs,
 		children: children,
 	}
@@ -205,12 +196,12 @@ func CreateElementNode(tag_name string, attrs AttributeMap, children []Node) Ele
 // #region-start CommentNode
 
 type CommentNode struct {
-	children []Node
 	content  string
+	children []Node
 }
 
 func (n *CommentNode) GetType() NodeType {
-	return Comment
+	return NodeType_Comment
 }
 
 func (n *CommentNode) GetChildren() []Node {
@@ -225,13 +216,8 @@ func (n *CommentNode) SetTextContent(value string) {
 	n.content = value
 }
 
-func IsCommentNode(n Node) bool {
-	return n.GetType() == Comment
-}
-
 func CreateCommentNode(content string) CommentNode {
 	return CommentNode{
-		content:  content,
-		children: []Node{},
+		content: content,
 	}
 }

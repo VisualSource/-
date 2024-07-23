@@ -1,21 +1,36 @@
 package plex
 
 import (
-	"fmt"
-	"strings"
+	"github.com/veandco/go-sdl2/sdl"
 )
 
-func PrintDom(n Node, indent int) {
-
-	if p, ok := n.(*ElementNode); ok {
-		fmt.Printf("└-%s %s TAG:%s\n", strings.Repeat("-", indent), p.GetType(), p.GetTagName())
-	} else if p, ok := n.(*TextNode); ok {
-		fmt.Printf("└-%s %s TextContent: \"%s\"\n", strings.Repeat("-", indent), p.GetType(), p.GetTextContent())
-	} else if p, ok := n.(*CommentNode); ok {
-		fmt.Printf("└-%s %s TextContent: \"%s\"\n", strings.Repeat("-", indent), p.GetType(), p.GetTextContent())
+func MaxFloat32(a, b float32) float32 {
+	if a > b {
+		return a
 	}
+	return b
+}
 
-	for _, v := range n.GetChildren() {
-		PrintDom(v, indent+5)
+func MinFloat32(a, b float32) float32 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func ClampFloat32(v, lo, hi float32) float32 {
+	return MinFloat32(MaxFloat32(v, lo), hi)
+}
+
+func GetWindowDimentions(window *sdl.Window) Dimensions {
+	h, w := window.GetSize()
+
+	return Dimensions{
+		Content: sdl.FRect{
+			X: 0,
+			Y: 0,
+			W: float32(w),
+			H: float32(h),
+		},
 	}
 }
