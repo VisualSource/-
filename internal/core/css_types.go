@@ -16,6 +16,14 @@ type Specificity struct {
 
 type CssValue interface{}
 
+func IsCssKeyword(v CssValue, key string) bool {
+	if item, ok := v.(string); ok && item == key {
+		return true
+	}
+
+	return false
+}
+
 type CssLengthValue struct {
 	Value float32
 	Unit  uint8
@@ -26,6 +34,13 @@ func (lv *CssLengthValue) ToPx() float32 {
 		return lv.Value
 	}
 
+	return 0.0
+}
+
+func AsCssLengthValue(v CssValue) float32 {
+	if v, ok := v.(CssLengthValue); ok {
+		return v.ToPx()
+	}
 	return 0.0
 }
 

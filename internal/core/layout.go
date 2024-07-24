@@ -15,100 +15,106 @@ type LayoutBox struct {
 	children   []LayoutBox
 }
 
-func CreateLayoutBox(dimensions Dimensions, boxType BoxType, node optional.Option[StyledNode], children []LayoutBox) LayoutBox {
-	return LayoutBox{
-		dimensions: dimensions,
-		boxType:    boxType,
-		node:       node,
-		children:   children,
-	}
-}
-
-func (l *LayoutBox) GetInlineContainer() *LayoutBox {
-	switch l.boxType {
-	case BoxType_Inline:
-		fallthrough
-	case BoxType_AnonymousBlock:
-		return l
-	case BoxType_Block:
-
-		// create anony block if not exists
-		// else create return block
-
-		if len(l.children) < 1 || l.children[len(l.children)-1].boxType != BoxType_AnonymousBlock {
-			l.children = append(l.children, LayoutBox{
-				boxType: BoxType_AnonymousBlock,
-			})
-		}
-
-		last := l.children[len(l.children)-1]
-
-		return &last
-	}
-
-	panic("Should not be here")
-}
-
-func (l *LayoutBox) GetLayout(containing Dimensions) {
+func (l *LayoutBox) layout(containing Dimensions) {
 	switch l.boxType {
 	case BoxType_Block:
 		l.layoutBlock(containing)
 	}
 }
 
+// Lay out a block-level element and its descendants.
 func (l *LayoutBox) layoutBlock(containing Dimensions) {
-	l.CalculateBlockWidth(containing)
-	l.CalculateBlockPosition(containing)
-	l.LayoutBlockChildren()
-	l.CalculateBlockHeight()
-}
-
-func (l *LayoutBox) CalculateBlockWidth(containing Dimensions) {
 	if l.node.IsNone() {
 		return
 	}
+	l.calculateBlockWidth(containing)
+	l.calculateBlockPosition(containing)
+	l.layoutBlockChildren()
+	l.calculateBlockHeight()
 
+}
+
+func (l *LayoutBox) calculateBlockHeight() {
+	style := l.node.Unwrap()
+	prop := style.GetProp("height")
+	if prop.IsNone() {
+		return
+	}
+	if i, ok := prop.Unwrap().(CssLengthValue); ok {
+		l.dimensions.Content.H = i.ToPx()
+	}
+}
+
+func (l *LayoutBox) layoutBlockChildren() {
+	for i := 0; i < len(l.children); i++ {
+		l.children[i].layout(l.dimensions)
+		l.dimensions.Content.H += l.children[i].dimensions.MarginBox().H
+	}
+}
+
+func (l *LayoutBox) calculateBlockPosition(containing Dimensions) {
+	style := l.node.Unwrap()
+	zero := optional.Some[CssValue](CssLengthValue{
+		Value: 0,
+		Unit:  CssUnit_PX,
+	})
+
+	l.dimensions.Margin.Top = AsCssLengthValue(style.Lookup("margin-top", "margin").Or(zero).Unwrap())
+	l.dimensions.Margin.Bottom = AsCssLengthValue(style.Lookup("margin-bttom", "margin").Or(zero).Unwrap())
+
+	l.dimensions.Border.Top = AsCssLengthValue(style.Lookup("border-top-width", "border-width").Or(zero).Unwrap())
+	l.dimensions.Border.Bottom = AsCssLengthValue(style.Lookup("border-bottom-width", "border-with").Or(zero).Unwrap())
+
+	l.dimensions.Padding.Top = AsCssLengthValue(style.Lookup("padding-top", "padding").Or(zero).Unwrap())
+	l.dimensions.Padding.Bottom = AsCssLengthValue(style.Lookup("padding-bottom", "padding").Or(zero).Unwrap())
+
+	l.dimensions.Content.X = containing.Content.X +
+		l.dimensions.Margin.Left +
+		l.dimensions.Border.Left +
+		l.dimensions.Padding.Left
+
+	l.dimensions.Content.Y = containing.Content.H +
+		containing.Content.Y +
+		l.dimensions.Margin.Top +
+		l.dimensions.Border.Top +
+		l.dimensions.Padding.Top
+}
+
+func (l *LayoutBox) calculateBlockWidth(containing Dimensions) {
 	style := l.node.Unwrap()
 
 	width := style.GetProp("width").Or(optional.Some[CssValue]("auto")).Unwrap()
 
-	var zero optional.Option[CssValue] = optional.Some[CssValue](CssLengthValue{
-		Value: 0.0,
+	zero := optional.Some[CssValue](CssLengthValue{
+		Value: 0,
 		Unit:  CssUnit_PX,
 	})
 
-	margin_left := style.Lookup("margin-left", "margin").Or(zero).Unwrap()
-	margin_right := style.Lookup("margin-right", "margin").Or(zero).Unwrap()
+	marginLeft := style.Lookup("margin-left", "margin").Or(zero).Unwrap()
+	marginRight := style.Lookup("margin-right", "margin").Or(zero).Unwrap()
+	borderLeft := style.Lookup("border-left-width", "border-width").Or(zero).Unwrap()
+	borderRight := style.Lookup("border-right-width", "border-width").Or(zero).Unwrap()
+	paddingLeft := style.Lookup("padding-left", "padding").Or(zero).Unwrap()
+	paddingRight := style.Lookup("padding-right", "padding").Or(zero).Unwrap()
 
-	border_left := style.Lookup("border-left-width", "border-width").Or(zero).Unwrap()
-	border_right := style.Lookup("border-right-width", "border-width").Or(zero).Unwrap()
-
-	padding_left := style.Lookup("padding-left", "padding").Or(zero).Unwrap()
-	padding_right := style.Lookup("padding-right", "padding").Or(zero).Unwrap()
-
-	totals := [7]CssValue{margin_left, margin_right, border_left, border_right, padding_left, padding_right, width}
+	items := [7]CssValue{marginLeft, marginRight, borderLeft, borderRight, paddingLeft, paddingRight, width}
 	var total float32 = 0.0
 
-	for _, i := range totals {
-		if length, ok := i.(CssLengthValue); ok {
-			total += length.ToPx()
+	for i := 0; i < len(items); i++ {
+		if value, ok := items[i].(CssLengthValue); ok {
+			total += value.ToPx()
 		}
 	}
 
-	var isWidthAuto bool = false
-	if item, ok := width.(string); ok && item == "auto" {
-		isWidthAuto = true
-	}
-
-	if !isWidthAuto && total > containing.Content.W {
-		if ml, ok := margin_left.(string); ok && ml == "auto" {
-			margin_left = CssLengthValue{
+	if !IsCssKeyword(width, "auto") && total > containing.Content.W {
+		if IsCssKeyword(marginLeft, "auto") {
+			marginLeft = CssLengthValue{
 				Value: 0.0,
 				Unit:  CssUnit_PX,
 			}
 		}
-		if mr, ok := margin_right.(string); ok && mr == "auto" {
-			margin_right = CssLengthValue{
+		if IsCssKeyword(marginRight, "auto") {
+			marginRight = CssLengthValue{
 				Value: 0.0,
 				Unit:  CssUnit_PX,
 			}
@@ -117,52 +123,43 @@ func (l *LayoutBox) CalculateBlockWidth(containing Dimensions) {
 
 	underflow := containing.Content.W - total
 
-	var isMarginLeftAuto bool = false
-	if ml, ok := margin_left.(string); ok && ml == "auto" {
-		isMarginLeftAuto = true
-	}
-	var isMarginRightAuto bool = false
-	if mr, ok := margin_right.(string); ok && mr == "auto" {
-		isMarginRightAuto = true
-	}
+	widthIsAuto := IsCssKeyword(width, "auto")
+	marginLeftIsAuto := IsCssKeyword(marginLeft, "auto")
+	marginRightIsAuto := IsCssKeyword(marginRight, "auto")
 
-	if !isWidthAuto && !isMarginLeftAuto && !isMarginRightAuto {
-		if mr, ok := margin_right.(*CssLengthValue); ok {
-			mr.Value += underflow
-		} else {
-			margin_right = CssLengthValue{
-				Value: underflow,
-				Unit:  CssUnit_PX,
-			}
+	if !widthIsAuto && !marginLeftIsAuto && !marginRightIsAuto {
+		marginRight = CssLengthValue{
+			Value: 0.0,
+			Unit:  CssUnit_PX,
 		}
-	} else if !isWidthAuto && !isMarginLeftAuto && isMarginRightAuto {
-		margin_right = CssLengthValue{
+	} else if !widthIsAuto && !marginLeftIsAuto && marginRightIsAuto {
+		marginRight = CssLengthValue{
 			Value: underflow,
 			Unit:  CssUnit_PX,
 		}
-	} else if !isWidthAuto && isMarginLeftAuto && !isMarginRightAuto {
-		margin_left = CssLengthValue{
+	} else if !widthIsAuto && marginLeftIsAuto && !marginRightIsAuto {
+		marginLeft = CssLengthValue{
 			Value: underflow,
 			Unit:  CssUnit_PX,
 		}
-	} else if !isWidthAuto && isMarginLeftAuto && isMarginRightAuto {
-		margin_left = CssLengthValue{
+	} else if !widthIsAuto && marginLeftIsAuto && marginRightIsAuto {
+		marginLeft = CssLengthValue{
 			Value: underflow / 2.0,
 			Unit:  CssUnit_PX,
 		}
-		margin_right = CssLengthValue{
+		marginRight = CssLengthValue{
 			Value: underflow / 2.0,
 			Unit:  CssUnit_PX,
 		}
-	} else if isWidthAuto {
-		if isMarginLeftAuto {
-			margin_left = CssLengthValue{
+	} else if widthIsAuto {
+		if marginLeftIsAuto {
+			marginLeft = CssLengthValue{
 				Value: 0.0,
 				Unit:  CssUnit_PX,
 			}
 		}
-		if isMarginRightAuto {
-			margin_right = CssLengthValue{
+		if marginRightIsAuto {
+			marginRight = CssLengthValue{
 				Value: 0.0,
 				Unit:  CssUnit_PX,
 			}
@@ -175,127 +172,83 @@ func (l *LayoutBox) CalculateBlockWidth(containing Dimensions) {
 			}
 		} else {
 			width = CssLengthValue{
-				Value: 0.0,
+				Value: underflow,
 				Unit:  CssUnit_PX,
 			}
-			if mr, ok := margin_right.(*CssLengthValue); ok {
-				mr.Value += underflow
-			} else {
-				margin_right = CssLengthValue{
-					Value: underflow,
-					Unit:  CssUnit_PX,
-				}
+
+			// right margin has been set to a css length value
+			marginRight = CssLengthValue{
+				Value: marginRight.(CssLengthValue).Value + underflow,
+				Unit:  CssUnit_PX,
 			}
 		}
 	}
 
-	if w, ok := width.(CssLengthValue); ok {
-		l.dimensions.Content.W = w.ToPx()
-	}
-
-	if pl, ok := padding_left.(CssLengthValue); ok {
-		l.dimensions.Padding.Left = pl.ToPx()
-	}
-	if pr, ok := padding_right.(CssLengthValue); ok {
-		l.dimensions.Padding.Right = pr.ToPx()
-	}
-
-	if pl, ok := border_left.(CssLengthValue); ok {
-		l.dimensions.Border.Left = pl.ToPx()
-	}
-	if pr, ok := border_right.(CssLengthValue); ok {
-		l.dimensions.Border.Right = pr.ToPx()
-	}
-
-	if pl, ok := margin_left.(CssLengthValue); ok {
-		l.dimensions.Margin.Left = pl.ToPx()
-	}
-	if pr, ok := margin_right.(CssLengthValue); ok {
-		l.dimensions.Margin.Right = pr.ToPx()
-	}
-
-}
-func (l *LayoutBox) CalculateBlockPosition(containing Dimensions) {
-	if l.node.IsNone() {
-		return
-	}
-
-	style := l.node.Unwrap()
-	zero := optional.Some(CssLengthValue{
-		Value: 0.0,
-		Unit:  CssUnit_PX,
-	})
-
-	l.dimensions.Margin.Top = style.LookupCssLength("margin-top", "margin").Or(zero).Unwrap().Value
-	l.dimensions.Margin.Bottom = style.LookupCssLength("margin-top", "margin").Or(zero).Unwrap().Value
-
-	l.dimensions.Border.Top = style.LookupCssLength("border-top-width", "border-width").Or(zero).Unwrap().Value
-	l.dimensions.Border.Bottom = style.LookupCssLength("border-top-width", "border-width").Or(zero).Unwrap().Value
-
-	l.dimensions.Padding.Top = style.LookupCssLength("padding-top", "padding").Or(zero).Unwrap().Value
-	l.dimensions.Padding.Bottom = style.LookupCssLength("padding-top", "padding").Or(zero).Unwrap().Value
-
-	l.dimensions.Content.X = containing.Content.X + l.dimensions.Margin.Left + l.dimensions.Border.Left + l.dimensions.Padding.Left
-	l.dimensions.Content.Y = containing.Content.H + containing.Content.Y + l.dimensions.Margin.Top + l.dimensions.Border.Top + l.dimensions.Padding.Top
-}
-func (l *LayoutBox) LayoutBlockChildren() {
-	for _, child := range l.children {
-		child.layoutBlock(l.dimensions)
-
-		l.dimensions.Content.H += child.dimensions.MarginBox().H
-	}
-}
-func (l *LayoutBox) CalculateBlockHeight() {
-	if l.node.IsNone() {
-		return
-	}
-	style := l.node.Unwrap()
-	height := style.GetPropAsLength("height")
-
-	if height.IsNone() {
-		return
-	}
-
-	l.dimensions.Content.H = height.Unwrap().Value
+	l.dimensions.Content.W = AsCssLengthValue(width)
+	l.dimensions.Padding.Left = AsCssLengthValue(paddingLeft)
+	l.dimensions.Padding.Right = AsCssLengthValue(paddingRight)
+	l.dimensions.Border.Left = AsCssLengthValue(borderLeft)
+	l.dimensions.Border.Right = AsCssLengthValue(borderRight)
+	l.dimensions.Margin.Left = AsCssLengthValue(marginLeft)
+	l.dimensions.Margin.Right = AsCssLengthValue(marginRight)
 }
 
-// #region start functions
+func (l *LayoutBox) getInlineContainer() *LayoutBox {
 
-func getContainerDisplay(display DisplayType) BoxType {
-	switch display {
-	case DisplayType_Block:
-		return BoxType_Block
-	case DisplayType_Inline:
-		return BoxType_Inline
+	switch l.boxType {
+	case BoxType_Block:
+		// if where are no children
+		if len(l.children) <= 0 {
+			l.children = append(l.children, LayoutBox{
+				boxType: BoxType_AnonymousBlock,
+			})
+			// if there is a child but is not a AnonymousBlock
+		} else if l.children[len(l.children)-1].boxType != BoxType_AnonymousBlock {
+			l.children = append(l.children, LayoutBox{
+				boxType: BoxType_AnonymousBlock,
+			})
+		}
+
+		last := l.children[len(l.children)-1]
+
+		return &last
 	default:
-		panic("root node has display: none")
+		return l
 	}
 }
 
-func BuildLayoutTree(node StyledNode) LayoutBox {
-
-	root := LayoutBox{
-		boxType: getContainerDisplay(node.GetDisplay()),
-		node:    optional.Some(node),
+func createNewLayoutBox(boxType BoxType, dim Dimensions, node optional.Option[StyledNode]) LayoutBox {
+	return LayoutBox{
+		boxType:    boxType,
+		dimensions: dim,
+		node:       node,
+		children:   []LayoutBox{},
 	}
+}
+
+func LayoutTree(node StyledNode, containing Dimensions) LayoutBox {
+	root := buildLayoutTree(node)
+	root.layout(containing)
+	return root
+}
+
+func buildLayoutTree(node StyledNode) LayoutBox {
+
+	boxType := DisplayTypeToBoxType(node.GetDisplay())
+
+	root := createNewLayoutBox(boxType, Dimensions{}, optional.Some(node))
 
 	for _, child := range node.children {
 		switch child.GetDisplay() {
 		case DisplayType_Block:
-			root.children = append(root.children, BuildLayoutTree(child))
+			item := buildLayoutTree(child)
+			root.children = append(root.children, item)
 		case DisplayType_Inline:
-			inline := root.GetInlineContainer()
-			inline.children = append(inline.children, BuildLayoutTree(child))
+			inline := root.getInlineContainer()
+			item := buildLayoutTree(child)
+			inline.children = append(inline.children, item)
 		}
 	}
-
-	return root
-}
-
-func LayoutTree(node StyledNode, dim Dimensions) LayoutBox {
-	root := BuildLayoutTree(node)
-
-	root.layoutBlock(dim)
 
 	return root
 }

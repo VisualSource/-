@@ -29,41 +29,27 @@ func main() {
 		panic(err)
 	}
 
-	parser := plex.HtmlParser{}
+	err = plex.LoadLocalHtmlDocument("./test.html", renderer)
 
-	dom, err := parser.Parse(`
-		<html>
-			<head>
-				<style>
-					html { display: block; }
-					head { display: none; }
-					body { display: block; margin: 8px; }
-					div  { display: block; background-color: #00ffff; height: 100px; }
-				</style>
-			</head>
-			<body>
-				<div></div>
-			</body>
-		</html>
-	`)
 	if err != nil {
-		fmt.Printf("DOM parser error: %s\n", err)
-		return
+		fmt.Printf("Render Error: %s", err)
 	}
-
-	dim := plex.GetWindowDimentions(window)
-	style := plex.ParseStylesFromDocument(dom)
-	layout := plex.LayoutTree(style, dim)
-	dump.P(layout)
-	plex.Print(&layout, renderer, window)
 
 	running := true
 	for running {
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
+			switch t := event.(type) {
 			case *sdl.QuitEvent:
 				println("Quit")
 				running = false
+			case *sdl.KeyboardEvent:
+				if t.Keysym.Sym == sdl.K_F5 && t.State == sdl.RELEASED {
+					fmt.Println("Reloading html Document")
+					err = plex.LoadLocalHtmlDocument("./test.html", renderer)
+					if err != nil {
+						fmt.Printf("Render Error: %s", err)
+					}
+				}
 			}
 		}
 		sdl.Delay(33)

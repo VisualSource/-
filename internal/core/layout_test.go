@@ -94,20 +94,6 @@ func TestDimensionsMarginBox(t *testing.T) {
 	t.Logf("%v", r)
 }
 
-func TestBuildLayout(t *testing.T) {
-
-	rootNode := plex.CreateElementNode("html", plex.AttributeMap{"id": "root"}, []plex.Node{})
-	styleNode := plex.CreateStyleNode(&rootNode, plex.PropertyMap{
-		"width":   "auto",
-		"height":  "auto",
-		"display": "block",
-	}, []plex.StyledNode{})
-
-	layout := plex.BuildLayoutTree(styleNode)
-
-	t.Logf("%#v", layout)
-}
-
 /*func TestCalculateBlockWidth(t *testing.T){
 
 	rootNode := plex.CreateElementNode("html", plex.AttributeMap{"id": "root"}, []plex.Node{})

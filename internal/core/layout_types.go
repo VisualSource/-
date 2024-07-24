@@ -26,6 +26,15 @@ type EdgeSizes struct {
 	Bottom float32
 }
 
+func CreateNewEdge(left, right, top, bottom float32) EdgeSizes {
+	return EdgeSizes{
+		Left:   left,
+		Right:  right,
+		Top:    top,
+		Bottom: bottom,
+	}
+}
+
 // #region-start Dimensions
 
 type Dimensions struct {
@@ -56,5 +65,16 @@ func expandedBy(rect sdl.FRect, edge EdgeSizes) sdl.FRect {
 		Y: rect.Y - edge.Top,
 		W: rect.W + edge.Left + edge.Right,
 		H: rect.H + edge.Top + edge.Bottom,
+	}
+}
+
+func DisplayTypeToBoxType(display DisplayType) BoxType {
+	switch display {
+	case DisplayType_Block:
+		return BoxType_Block
+	case DisplayType_Inline:
+		return BoxType_Inline
+	default:
+		panic("root node has display none")
 	}
 }

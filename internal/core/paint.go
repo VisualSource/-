@@ -143,13 +143,19 @@ func printItem(renderer *sdl.Renderer, width float32, height float32, cmd Render
 
 }
 
-func Print(layout *LayoutBox, renderer *sdl.Renderer, window *sdl.Window) {
+func Print(layout *LayoutBox, renderer *sdl.Renderer, window *sdl.Window, windowBgColor sdl.Color) {
 	displayList := buildDisplayList(layout)
 
 	w, h := window.GetSize()
 
 	fw := float32(w)
 	fh := float32(h)
+
+	renderer.SetDrawColor(windowBgColor.R, windowBgColor.G, windowBgColor.B, 255)
+	renderer.FillRect(&sdl.Rect{
+		H: h,
+		W: w,
+	})
 
 	for _, child := range displayList {
 		printItem(renderer, fw, fh, child)

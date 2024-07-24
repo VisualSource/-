@@ -23,22 +23,23 @@ func ClampFloat32(v, lo, hi float32) float32 {
 }
 
 func GetWindowDimentions(window *sdl.Window) Dimensions {
-	h, w := window.GetSize()
+	w, _ := window.GetSize()
 
 	return Dimensions{
 		Content: sdl.FRect{
 			X: 0,
 			Y: 0,
 			W: float32(w),
-			H: float32(h),
+			H: 0,
 		},
 	}
 }
 
-func ParseStylesFromDocument(node Node) StyledNode {
+func ParseStylesFromDocument(node Node) (StyledNode, sdl.Color) {
 	cssParser := CssParser{}
 
 	var styletree StyledNode
+	color := sdl.Color{A: 255, R: 255, G: 255, B: 255}
 
 	if document, ok := node.(*ElementNode); ok {
 		selector := CreateNewSelector("style", "", []string{})
@@ -53,7 +54,14 @@ func ParseStylesFromDocument(node Node) StyledNode {
 		}
 
 		styletree = StyleTree(node, stylesheets)
+
+		bgColor := styletree.Lookup("background-color", "background")
+		bgColor.IfSome(func(v CssValue) {
+			if c, ok := v.(sdl.Color); ok {
+				color = c
+			}
+		})
 	}
 
-	return styletree
+	return styletree, color
 }
