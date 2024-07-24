@@ -71,3 +71,11 @@ func (s *Selector) Specificity() Specificity {
 
 	return Specificity{a, b, c}
 }
+
+func CreateNewSelector(tagName string, id string, classes []string) Selector {
+	return Selector{
+		TagName: tagName,
+		Id:      id,
+		Classes: classes,
+	}
+}

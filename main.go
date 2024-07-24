@@ -5,6 +5,7 @@ import (
 	plex "visualsource/plex/internal/core"
 
 	"github.com/gookit/goutil/dump"
+	"github.com/veandco/go-sdl2/sdl"
 )
 
 func main() {
@@ -12,38 +13,12 @@ func main() {
 		opts.MaxDepth = 10
 	})
 
-	parser := plex.HtmlParser{}
-	//cssParser := plex.CssParser{}
-
-	dom, err := parser.Parse(`
-		<html>
-			<head>
-				<style>
-					html { display: block; }
-					head { display: none; }
-					body { display: block; margin: 8px; }
-					div  { display: block; margin: 4px; background-color: #00ffff; height: 100px; }
-				</style>
-			</head>
-			<body>
-				<div></div>
-			</body>
-		</html>
-	`)
-	dump.P(dom)
-	if err != nil {
-		fmt.Printf("DOM parser error: %s\n", err)
-		return
-	}
-
-	// load user agent css styles
-
-	/*if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
 	}
 	defer sdl.Quit()
 
-	window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, 800, 600, sdl.WINDOW_SHOWN)
+	window, err := sdl.CreateWindow("Plex", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, 800, 600, sdl.WINDOW_SHOWN)
 	if err != nil {
 		panic(err)
 	}
@@ -54,8 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	parser := plex.CreateHtmlParser()
-	cssParser := plex.CssParser{}
+	parser := plex.HtmlParser{}
 
 	dom, err := parser.Parse(`
 		<html>
@@ -64,7 +38,7 @@ func main() {
 					html { display: block; }
 					head { display: none; }
 					body { display: block; margin: 8px; }
-					div  { display: block; margin: 4px; background-color: #00ffff; height: 100px; }
+					div  { display: block; background-color: #00ffff; height: 100px; }
 				</style>
 			</head>
 			<body>
@@ -77,27 +51,11 @@ func main() {
 		return
 	}
 
-	var styletree plex.StyledNode
-	if doc, ok := dom.(*plex.ElementNode); ok {
-		styleTags := doc.QuerySelectorAll(plex.NewSelector("style", "", []string{}))
-
-		stylesheets := []plex.Stylesheet{}
-		for _, style := range styleTags {
-			css, err := cssParser.Parse(style.GetTextContent(), 1)
-			if err == nil {
-				stylesheets = append(stylesheets, css)
-			}
-		}
-
-		styletree = plex.StyleTree(&dom, stylesheets)
-	}
-
 	dim := plex.GetWindowDimentions(window)
-	layout := plex.LayoutTree(styletree, dim)
-
+	style := plex.ParseStylesFromDocument(dom)
+	layout := plex.LayoutTree(style, dim)
+	dump.P(layout)
 	plex.Print(&layout, renderer, window)
-
-	fmt.Printf("%#v\n", layout)
 
 	running := true
 	for running {
@@ -109,5 +67,5 @@ func main() {
 			}
 		}
 		sdl.Delay(33)
-	}*/
+	}
 }

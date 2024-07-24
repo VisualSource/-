@@ -3,62 +3,9 @@ package plex
 // https://github.com/moznion/go-optional
 import (
 	"github.com/moznion/go-optional"
-	"github.com/veandco/go-sdl2/sdl"
 )
 
 // #region-start Types
-
-type BoxType = uint8
-type DisplayType = uint8
-
-// #region-start CONTS
-
-const (
-	BoxType_Block          BoxType = 0
-	BoxType_Inline         BoxType = 1
-	BoxType_AnonymousBlock BoxType = 2
-)
-
-const (
-	DisplayType_Inline DisplayType = 0
-	DisplayType_Block  DisplayType = 1
-	DisplayType_None   DisplayType = 2
-)
-
-type EdgeSizes struct {
-	Left   float32
-	Right  float32
-	Top    float32
-	Bottom float32
-}
-
-// #region-start Dimensions
-
-type Dimensions struct {
-	Content sdl.FRect
-	Padding EdgeSizes
-	Border  EdgeSizes
-	Margin  EdgeSizes
-}
-
-func (d *Dimensions) PaddingBox() sdl.FRect {
-	return ExpanedBy(d.Content, d.Padding)
-}
-func (d *Dimensions) BorderBox() sdl.FRect {
-	return ExpanedBy(d.PaddingBox(), d.Border)
-}
-func (d *Dimensions) MarginBox() sdl.FRect {
-	return ExpanedBy(d.BorderBox(), d.Margin)
-}
-
-func ExpanedBy(rect sdl.FRect, edge EdgeSizes) sdl.FRect {
-	return sdl.FRect{
-		X: rect.X - edge.Left,
-		Y: rect.Y - edge.Top,
-		W: rect.W + edge.Left + edge.Right,
-		H: rect.H + edge.Top + edge.Bottom,
-	}
-}
 
 // #region-start LayoutBox
 type LayoutBox struct {
@@ -88,7 +35,7 @@ func (l *LayoutBox) GetInlineContainer() *LayoutBox {
 		// create anony block if not exists
 		// else create return block
 
-		if len(l.children) <= 0 || l.children[len(l.children)-1].boxType != BoxType_AnonymousBlock {
+		if len(l.children) < 1 || l.children[len(l.children)-1].boxType != BoxType_AnonymousBlock {
 			l.children = append(l.children, LayoutBox{
 				boxType: BoxType_AnonymousBlock,
 			})
@@ -106,8 +53,6 @@ func (l *LayoutBox) GetLayout(containing Dimensions) {
 	switch l.boxType {
 	case BoxType_Block:
 		l.layoutBlock(containing)
-	case BoxType_Inline:
-	case BoxType_AnonymousBlock:
 	}
 }
 
@@ -146,9 +91,7 @@ func (l *LayoutBox) CalculateBlockWidth(containing Dimensions) {
 
 	for _, i := range totals {
 		if length, ok := i.(CssLengthValue); ok {
-			if length.Unit == CssUnit_PX {
-				total += length.Value
-			}
+			total += length.ToPx()
 		}
 	}
 
@@ -247,28 +190,28 @@ func (l *LayoutBox) CalculateBlockWidth(containing Dimensions) {
 	}
 
 	if w, ok := width.(CssLengthValue); ok {
-		l.dimensions.Content.W = w.Value
+		l.dimensions.Content.W = w.ToPx()
 	}
 
 	if pl, ok := padding_left.(CssLengthValue); ok {
-		l.dimensions.Padding.Left = pl.Value
+		l.dimensions.Padding.Left = pl.ToPx()
 	}
 	if pr, ok := padding_right.(CssLengthValue); ok {
-		l.dimensions.Padding.Right = pr.Value
+		l.dimensions.Padding.Right = pr.ToPx()
 	}
 
 	if pl, ok := border_left.(CssLengthValue); ok {
-		l.dimensions.Border.Left = pl.Value
+		l.dimensions.Border.Left = pl.ToPx()
 	}
 	if pr, ok := border_right.(CssLengthValue); ok {
-		l.dimensions.Border.Right = pr.Value
+		l.dimensions.Border.Right = pr.ToPx()
 	}
 
 	if pl, ok := margin_left.(CssLengthValue); ok {
-		l.dimensions.Margin.Left = pl.Value
+		l.dimensions.Margin.Left = pl.ToPx()
 	}
 	if pr, ok := margin_right.(CssLengthValue); ok {
-		l.dimensions.Margin.Right = pr.Value
+		l.dimensions.Margin.Right = pr.ToPx()
 	}
 
 }
@@ -283,14 +226,14 @@ func (l *LayoutBox) CalculateBlockPosition(containing Dimensions) {
 		Unit:  CssUnit_PX,
 	})
 
-	l.dimensions.Margin.Top = style.LookupCssLength("margin-left", "margin").Or(zero).Unwrap().Value
-	l.dimensions.Margin.Bottom = style.LookupCssLength("margin-right", "margin").Or(zero).Unwrap().Value
+	l.dimensions.Margin.Top = style.LookupCssLength("margin-top", "margin").Or(zero).Unwrap().Value
+	l.dimensions.Margin.Bottom = style.LookupCssLength("margin-top", "margin").Or(zero).Unwrap().Value
 
-	l.dimensions.Border.Top = style.LookupCssLength("border-left-width", "border-width").Or(zero).Unwrap().Value
-	l.dimensions.Border.Bottom = style.LookupCssLength("border-right-width", "border-width").Or(zero).Unwrap().Value
+	l.dimensions.Border.Top = style.LookupCssLength("border-top-width", "border-width").Or(zero).Unwrap().Value
+	l.dimensions.Border.Bottom = style.LookupCssLength("border-top-width", "border-width").Or(zero).Unwrap().Value
 
-	l.dimensions.Padding.Top = style.LookupCssLength("padding-left", "padding").Or(zero).Unwrap().Value
-	l.dimensions.Padding.Bottom = style.LookupCssLength("padding-right", "padding").Or(zero).Unwrap().Value
+	l.dimensions.Padding.Top = style.LookupCssLength("padding-top", "padding").Or(zero).Unwrap().Value
+	l.dimensions.Padding.Bottom = style.LookupCssLength("padding-top", "padding").Or(zero).Unwrap().Value
 
 	l.dimensions.Content.X = containing.Content.X + l.dimensions.Margin.Left + l.dimensions.Border.Left + l.dimensions.Padding.Left
 	l.dimensions.Content.Y = containing.Content.H + containing.Content.Y + l.dimensions.Margin.Top + l.dimensions.Border.Top + l.dimensions.Padding.Top

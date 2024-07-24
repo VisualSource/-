@@ -34,3 +34,26 @@ func GetWindowDimentions(window *sdl.Window) Dimensions {
 		},
 	}
 }
+
+func ParseStylesFromDocument(node Node) StyledNode {
+	cssParser := CssParser{}
+
+	var styletree StyledNode
+
+	if document, ok := node.(*ElementNode); ok {
+		selector := CreateNewSelector("style", "", []string{})
+		styleTags := document.QuerySelectorAll(&selector)
+		stylesheets := []Stylesheet{}
+
+		for _, style := range styleTags {
+			css, err := cssParser.Parse(style.GetTextContent(), 1)
+			if err == nil {
+				stylesheets = append(stylesheets, css)
+			}
+		}
+
+		styletree = StyleTree(node, stylesheets)
+	}
+
+	return styletree
+}

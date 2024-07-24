@@ -10,7 +10,7 @@ type PropertyMap = map[string]CssValue
 
 // #region-start StyleNode
 type StyledNode struct {
-	node     *Node
+	node     Node
 	props    PropertyMap
 	children []StyledNode
 }
@@ -38,10 +38,16 @@ func (n *StyledNode) GetPropAsLength(key string) optional.Option[CssLengthValue]
 
 func (n *StyledNode) GetDisplay() DisplayType {
 
-	display := n.props["display"]
+	value := n.GetProp("display")
 
-	if item, ok := display.(*string); ok {
-		switch *item {
+	if value.IsNone() {
+		return DisplayType_Inline
+	}
+
+	display := value.Unwrap()
+
+	if item, ok := display.(string); ok {
+		switch item {
 		case "block":
 			return DisplayType_Block
 		case "none":
@@ -85,7 +91,7 @@ func (n *StyledNode) Lookup(props ...string) optional.Option[CssValue] {
 
 func CreateStyleNode(node Node, props PropertyMap, children []StyledNode) StyledNode {
 	return StyledNode{
-		node:     &node,
+		node:     node,
 		props:    props,
 		children: children,
 	}
@@ -149,16 +155,16 @@ func specifiedValues(el *ElementNode, stylesheets []Stylesheet) PropertyMap {
 	return values
 }
 
-func StyleTree(root *Node, stylesheet []Stylesheet) StyledNode {
+func StyleTree(root Node, stylesheet []Stylesheet) StyledNode {
 
 	var specified PropertyMap
 	children := []StyledNode{}
-	if node, ok := (*root).(*ElementNode); ok {
+	if node, ok := (root).(*ElementNode); ok {
 
 		specified = specifiedValues(node, stylesheet)
 
 		for _, child := range node.GetChildren() {
-			children = append(children, StyleTree(&child, stylesheet))
+			children = append(children, StyleTree(child, stylesheet))
 		}
 	} else {
 		specified = PropertyMap{}
