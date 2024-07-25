@@ -5,6 +5,175 @@ import (
 	"unicode"
 )
 
+type Tokenizer struct {
+	pos    int
+	len    int
+	data   []rune
+	tokens []Token
+}
+
+func (t *Tokenizer) Parse(value string) ([]Token, error) {
+	t.pos = 0
+	t.data = []rune(value)
+	t.len = len(t.data)
+	t.tokens = []Token{}
+
+	for !t.eof() {
+		err := t.consumeToken()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	t.tokens = append(t.tokens, &EmptyToken{Id: Token_EOF})
+
+	return t.tokens, nil
+}
+
+func (t *Tokenizer) consumeToken() error {
+	char := t.data[t.pos]
+	switch {
+	case char == '/' && t.data[t.pos+1] == '*':
+		t.consumeComment()
+	case char == '"' || char == '\'':
+		t.consumeString()
+	case unicode.IsSpace(char):
+		t.consumeWhilespace()
+	case char == '#':
+		/**
+		If the next input code point is an ident code point or the next two input code points are a valid escape, then:
+		Create a <hash-token>.
+		If the next 3 input code points would start an ident sequence, set the <hash-token>’s type flag to "id".
+		Consume an ident sequence, and set the <hash-token>’s value to the returned string.
+		Return the <hash-token>.
+		*/
+
+		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.pos++
+	case char == '(':
+		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Pren_Open})
+		t.pos++
+	case char == ')':
+		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Pren_Close})
+		t.pos++
+	case char == '+':
+		/*
+			If the input stream starts with a number, reconsume the current input code point,
+			consume a numeric token, and return it.
+		*/
+
+		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.pos++
+	case char == ',':
+		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Comma})
+		t.pos++
+	case char == '-':
+		/*
+			If the input stream starts with a number, reconsume the current input code point,
+				consume a numeric token, and return it.
+
+			Otherwise, if the next 2 input code points are
+				U+002D HYPHEN-MINUS U+003E GREATER-THAN SIGN (->),
+				consume them and return a <CDC-token>.
+
+			Otherwise, if the input stream starts with an ident sequence,
+				reconsume the current input code point,
+				consume an ident-like token,
+				and return it.
+		*/
+		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.pos++
+	case char == '.':
+		/*
+			If the input stream starts with a number,
+			reconsume the current input code point,
+			consume a numeric token, and return it.
+		*/
+
+		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.pos++
+	case char == ':':
+		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Colon})
+		t.pos++
+	case char == ';':
+		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Semicolon})
+		t.pos++
+	case char == '<':
+
+		if t.data[t.pos+1] == '!' && t.data[t.pos+2] == '-' && t.data[t.pos+3] == '-' {
+
+			/*
+				If the next 3 input code points are U+0021 EXCLAMATION MARK U+002D HYPHEN-MINUS U+002D HYPHEN-MINUS (!--), consume them and return a <CDO-token>.
+			*/
+
+			return nil
+		}
+
+		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.pos++
+	case char == '@':
+
+		/*
+			If the next 3 input code points would start an ident sequence,
+			consume an ident sequence, create an <at-keyword-token> with its value set to
+			the returned value, and return it.
+		*/
+		// create at keyword token else
+		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.pos++
+	case char == '[':
+		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Square_Bracket_Open})
+		t.pos++
+	case char == ']':
+		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Square_Bracket_Close})
+		t.pos++
+	case char == '\\':
+
+		/*
+			If the input stream starts with a valid escape,
+			reconsume the current input code point,
+			consume an ident-like token, and return it.
+		*/
+		// Otherwise, this is a parse error.
+		// Return a <delim-token> with its value set to the current input code point.
+		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.pos++
+	case char == '{':
+		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Clearly_Open})
+		t.pos++
+	case char == '}':
+		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Clearly_Close})
+		t.pos++
+	case unicode.IsDigit(char):
+		t.consumeNumeric()
+	case unicode.IsLetter(char) || char == '_':
+		t.consumeIdentLike()
+	default:
+		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.pos++
+	}
+
+	return nil
+}
+
+func (t *Tokenizer) consumeWhilespace() {}
+func (t *Tokenizer) consumeComment()    {}
+func (t *Tokenizer) consumeNumeric()    {}
+func (t *Tokenizer) consumeIdentLike()  {}
+func (t *Tokenizer) consumeString()     {}
+func (t *Tokenizer) consumeUrl()        {}
+func (t *Tokenizer) consumeBadUrl()     {}
+func (t *Tokenizer) consumeEscaped()    {}
+func (t *Tokenizer) consumeIdent()      {}
+func (t *Tokenizer) consumeNumber()     {}
+
+func (t *Tokenizer) checkNextTwo()   {}
+func (t *Tokenizer) checkNextThree() {}
+
+func (t *Tokenizer) eof() bool {
+	return t.pos >= t.len-1
+}
+
 func eof(len int, pos int) bool {
 	return pos >= len-1
 }
@@ -21,7 +190,7 @@ func startsWith(s *[]rune, data *[]rune, dataLen int, startPos int) bool {
 	return isSame
 }
 
-func Tokenizer(input string) ([]Token, error) {
+func RunnerTokenizer(input string) ([]Token, error) {
 	var commentStart = []rune{'/', '*'}
 	var commentEnd = []rune{'*', '/'}
 
