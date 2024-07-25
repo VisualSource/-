@@ -26,6 +26,7 @@ const (
 	Token_Pren_Close           TokenType = 20
 	Token_Clearly_Open         TokenType = 21
 	Token_Clearly_Close        TokenType = 22
+	Token_EOF                  TokenType = 23
 )
 
 type Token interface {
