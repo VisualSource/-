@@ -56,7 +56,8 @@ func TestConsumeTokenWhilespace(t *testing.T) {
 	}
 }
 
-func TestConsumeTokenStringDouble(t *testing.T) {
+// region start ConsumeString
+func TestConsumeToken_StringDouble(t *testing.T) {
 	parser := plex_css.Tokenizer{}
 
 	result, err := parser.Parse("\"I Am a string\"")
@@ -85,7 +86,7 @@ func TestConsumeTokenStringDouble(t *testing.T) {
 		t.Fatalf("Token is not a String token get: %v", result[0])
 	}
 }
-func TestConsumeTokenStringSingle(t *testing.T) {
+func TestConsumeToken_StringSingle(t *testing.T) {
 	parser := plex_css.Tokenizer{}
 
 	content := "'I Am a string'"
@@ -117,7 +118,9 @@ func TestConsumeTokenStringSingle(t *testing.T) {
 	}
 }
 
-func TestConsumeTokenHashSingle(t *testing.T) {
+// region start ConsumeToken'#'
+
+func TestConsumeTokenHash_Single(t *testing.T) {
 	parser := plex_css.Tokenizer{}
 
 	content := "#"
@@ -147,7 +150,7 @@ func TestConsumeTokenHashSingle(t *testing.T) {
 	}
 }
 
-func TestConsumeTokenHashLong(t *testing.T) {
+func TestConsumeToken_HashLong(t *testing.T) {
 	parser := plex_css.Tokenizer{}
 
 	content := "#ImAId"
@@ -180,7 +183,7 @@ func TestConsumeTokenHashLong(t *testing.T) {
 	}
 }
 
-func TestConsumeTokenHashShort(t *testing.T) {
+func TestConsumeToken_HashShort(t *testing.T) {
 	parser := plex_css.Tokenizer{}
 
 	content := "#ID"
@@ -212,6 +215,8 @@ func TestConsumeTokenHashShort(t *testing.T) {
 		t.Fatalf("Token is not a Rune token got: %v", result[0])
 	}
 }
+
+// region start ConsumeSingleRune
 
 func TestConsumeSingleRune(t *testing.T) {
 	parser := plex_css.Tokenizer{}
@@ -246,6 +251,575 @@ func TestConsumeSingleRune(t *testing.T) {
 		}
 	}
 }
+
+// region start ConsumeNumber
+
+func TestConsumeNumber_Int(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("566")
+
+	value, dataType := tokenizer.ConsumeNumber()
+
+	if dataType != "integer" {
+		t.Fatalf("Expected dataType to be of integer not %s", dataType)
+	}
+
+	if value != 566 {
+		t.Fatalf("Expected value to be 566 not %f", value)
+	}
+}
+
+func TestConsumeNumber_Float(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("566.3")
+
+	value, dataType := tokenizer.ConsumeNumber()
+
+	if dataType != "number" {
+		t.Fatalf("Expected dataType to be of number not %s", dataType)
+	}
+
+	if value != 566.3 {
+		t.Fatalf("Expected value to be 566 not %f", value)
+	}
+}
+
+func TestConsumeNumber_Exponent(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("566e4")
+
+	value, dataType := tokenizer.ConsumeNumber()
+
+	if dataType != "number" {
+		t.Fatalf("Expected dataType to be of number not %s", dataType)
+	}
+
+	if value != 566e4 {
+		t.Fatalf("Expected value to be 566e4 not %f", value)
+	}
+}
+
+func TestConsumeNumber_Signed(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("-566")
+
+	value, dataType := tokenizer.ConsumeNumber()
+
+	if dataType != "integer" {
+		t.Fatalf("Expected dataType to be of integer not %s", dataType)
+	}
+
+	if value != -566 {
+		t.Fatalf("Expected value to be -566 not %f", value)
+	}
+}
+
+// region start ConsumeToken'+'
+
+func TestConsumeToken_Plus(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "+"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_Delim {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.RuneToken); ok {
+		if e.Value != '+' {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+func TestConsumeToken_PlusNumber(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "+4445.0"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_Number {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.NumberToken); ok {
+		if e.Value != 4445.0 {
+			t.Fatalf("Value does not match input")
+		}
+		if e.DataType != "number" {
+			t.Fatalf("Value does not match input")
+		}
+		if !equal(e.Unit, []rune{}) {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+// region start CosumeToken'-'
+
+func TestConsumeToken_Minus(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "-4445.0"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_Number {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.NumberToken); ok {
+		if e.Value != -4445.0 {
+			t.Fatalf("Value does not match input")
+		}
+		if e.DataType != "number" {
+			t.Fatalf("Value does not match input")
+		}
+		if !equal(e.Unit, []rune{}) {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+func TestConsumeToken_MinusCDC(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "-->"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_CDC {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+}
+
+func TestConsumeToken_MinusIdent(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "-dent"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_Ident {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.StringToken); ok {
+		if string(e.Value) != content {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+func TestConsumeToken_MinusSelf(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "-"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_Delim {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.RuneToken); ok {
+		if e.Value != '-' {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+// region start ConsumeIdentLike
+
+func TestConsumeIdentLike_Ident(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("ident")
+
+	tokenizer.ConsumeIdentLike()
+
+	if len(tokenizer.Tokens) != 1 {
+		t.Fatalf("Expected only 1 tokens got %d", len(tokenizer.Tokens))
+	}
+
+	if tokenizer.Tokens[0].GetId() != plex_css.Token_Ident {
+		t.Fatalf("Did not find Ident Token Found %d", tokenizer.Tokens[0].GetId())
+	}
+
+	if e, ok := tokenizer.Tokens[0].(*plex_css.StringToken); ok {
+		if string(e.Value) != "ident" {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", tokenizer.Tokens[0])
+	}
+}
+
+func TestConsumeIdentLike_Function(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("var()")
+
+	tokenizer.ConsumeIdentLike()
+
+	if len(tokenizer.Tokens) != 1 {
+		t.Fatalf("Expected only 1 tokens got %d", len(tokenizer.Tokens))
+	}
+
+	if tokenizer.Tokens[0].GetId() != plex_css.Token_Function {
+		t.Fatalf("Did not find Ident Token Found %d", tokenizer.Tokens[0].GetId())
+	}
+
+	if e, ok := tokenizer.Tokens[0].(*plex_css.StringToken); ok {
+		if string(e.Value) != "var" {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", tokenizer.Tokens[0])
+	}
+}
+
+func TestConsumeIdentLike_URLFunction(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("url('test')")
+
+	tokenizer.ConsumeIdentLike()
+
+	if len(tokenizer.Tokens) != 1 {
+		t.Fatalf("Expected only 1 tokens got %d", len(tokenizer.Tokens))
+	}
+
+	if tokenizer.Tokens[0].GetId() != plex_css.Token_Function {
+		t.Fatalf("Did not find Ident Token Found %d", tokenizer.Tokens[0].GetId())
+	}
+
+	if e, ok := tokenizer.Tokens[0].(*plex_css.StringToken); ok {
+		if string(e.Value) != "url" {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", tokenizer.Tokens[0])
+	}
+}
+
+func TestConsumeIdentLike_URL(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("url(test.url)")
+
+	tokenizer.ConsumeIdentLike()
+
+	if len(tokenizer.Tokens) != 1 {
+		t.Fatalf("Expected only 1 tokens got %d", len(tokenizer.Tokens))
+	}
+
+	if tokenizer.Tokens[0].GetId() != plex_css.Token_Url {
+		t.Fatalf("Did not find Ident Token Found %d", tokenizer.Tokens[0].GetId())
+	}
+
+	if e, ok := tokenizer.Tokens[0].(*plex_css.StringToken); ok {
+		if string(e.Value) != "test.url" {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", tokenizer.Tokens[0])
+	}
+}
+
+// region end ConsumeIdentLike
+
+// region start ConsumeURL
+
+func TestConsumeUrl(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("  test.url    )")
+
+	tokenizer.ConsumeUrl()
+
+	if len(tokenizer.Tokens) != 1 {
+		t.Fatalf("Expected only 1 tokens got %d", len(tokenizer.Tokens))
+	}
+
+	if tokenizer.Tokens[0].GetId() != plex_css.Token_Url {
+		t.Fatalf("Did not find Ident Token Found %d", tokenizer.Tokens[0].GetId())
+	}
+
+	if e, ok := tokenizer.Tokens[0].(*plex_css.StringToken); ok {
+		if string(e.Value) != "test.url" {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", tokenizer.Tokens[0])
+	}
+}
+
+func TestConsumeBadUrl(t *testing.T) {
+	tokenizer := plex_css.CreateTestTokenizer("  test.url\"  }  )")
+
+	tokenizer.ConsumeUrl()
+
+	if len(tokenizer.Tokens) != 1 {
+		t.Fatalf("Expected only 1 tokens got %d", len(tokenizer.Tokens))
+	}
+
+	if tokenizer.Tokens[0].GetId() != plex_css.Token_Bad_Url {
+		t.Fatalf("Did not find Bad URL Token Found %d", tokenizer.Tokens[0].GetId())
+	}
+}
+
+// regions start ConsumeToken'.'
+
+func TestConsumeToken_StopSelf(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "."
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_Delim {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.RuneToken); ok {
+		if e.Value != '.' {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+func TestConsumeToken_StopNumber(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := ".45"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_Number {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.NumberToken); ok {
+		if e.Value != 0.45 {
+			t.Fatalf("Value does not match input")
+		}
+		if e.DataType != "number" {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+// regions start ConsumeToken'<'
+func TestConsumeToken_LessThanSelf(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "<"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_Delim {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.RuneToken); ok {
+		if e.Value != '<' {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+func TestConsumeToken_LessThanCDO(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "<!--"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_CDO {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+}
+
+// #region-start ConsumeToken'@'
+
+func TestConsumeToken_At(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "@"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_Delim {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.RuneToken); ok {
+		if e.Value != '@' {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+func TestConsumeToken_AtRule(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	content := "@charset"
+	result, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Expected only 2 tokens got %d", len(result))
+	}
+
+	if result[0].GetId() != plex_css.Token_At_Keyword {
+		t.Fatalf("Did not find Delim Token Found %d", result[0].GetId())
+	}
+	if result[1].GetId() != plex_css.Token_EOF {
+		t.Fatalf("Did not find EOF Token Found %d", result[1].GetId())
+	}
+
+	if e, ok := result[0].(*plex_css.StringToken); ok {
+		if string(e.Value) != "charset" {
+			t.Fatalf("Value does not match input")
+		}
+	} else {
+		t.Fatalf("Token is not a Rune token got: %v", result[0])
+	}
+}
+
+func TestParse(t *testing.T) {
+	parser := plex_css.Tokenizer{}
+
+	result, err := parser.Parse(`
+		body {
+			background-color: #F3F4F7;
+			display: flex;
+			flex-direction: row;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+			overflow: hidden;
+			gap: 20px;
+		}
+		span:nth-child(1):hover ~ button::before { 
+			width: 100%;
+		}
+		@keyframes scale {
+			0% {
+				transform: translateY(var(--origin, 0%));
+			}
+			100% {
+				transform: translateY(var(--destination, -50%));
+			}
+		}
+	`)
+	if err != nil {
+		t.Fatalf("There was an error: %s", err)
+	}
+
+	if len(result) != 127 {
+		t.Fatalf("Missing token expected 127 tokens got: %d", len(result))
+	}
+}
+
+// #region start UTILS
 
 func equal(a, b []rune) bool {
 	if len(a) != len(b) {
