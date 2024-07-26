@@ -62,7 +62,7 @@ func (t *RuneToken) GetId() TokenType {
 type FlagedStringToken struct {
 	Id    TokenType
 	Value []rune
-	Flag  []rune
+	Flag  string
 }
 
 func (f *FlagedStringToken) GetId() TokenType {

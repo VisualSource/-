@@ -1,7 +1,6 @@
 package plex_css
 
 import (
-	"fmt"
 	"unicode"
 )
 
@@ -9,52 +8,73 @@ type Tokenizer struct {
 	pos    int
 	len    int
 	data   []rune
-	tokens []Token
+	Tokens []Token
+}
+
+func CreateTestTokenizer(value string) Tokenizer {
+	data := []rune(value)
+
+	return Tokenizer{
+		pos:  0,
+		data: data,
+		len:  len(data),
+	}
 }
 
 func (t *Tokenizer) Parse(value string) ([]Token, error) {
 	t.pos = 0
 	t.data = []rune(value)
 	t.len = len(t.data)
-	t.tokens = []Token{}
+	t.Tokens = []Token{}
 
 	for !t.eof() {
-		err := t.consumeToken()
+		err := t.ConsumeToken()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	t.tokens = append(t.tokens, &EmptyToken{Id: Token_EOF})
+	t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_EOF})
 
-	return t.tokens, nil
+	return t.Tokens, nil
 }
 
-func (t *Tokenizer) consumeToken() error {
+func (t *Tokenizer) ConsumeToken() error {
 	char := t.data[t.pos]
 	switch {
-	case char == '/' && t.data[t.pos+1] == '*':
-		t.consumeComment()
+	case t.CheckNextTwo('/', '*'):
+		t.ConsumeComment()
 	case char == '"' || char == '\'':
-		t.consumeString()
+		t.ConsumeString()
 	case unicode.IsSpace(char):
-		t.consumeWhilespace()
+		t.ConsumeWhilespace()
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Whitespace})
 	case char == '#':
-		/**
-		If the next input code point is an ident code point or the next two input code points are a valid escape, then:
-		Create a <hash-token>.
-		If the next 3 input code points would start an ident sequence, set the <hash-token>’s type flag to "id".
-		Consume an ident sequence, and set the <hash-token>’s value to the returned string.
-		Return the <hash-token>.
-		*/
-
-		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
 		t.pos++
+
+		if !t.eof() && isIdentCodePoint(t.data[t.pos]) || t.AreNextValidEscape(0) {
+			flagType := "unrestricted"
+			if t.DoNextStartIdentSequence() {
+				flagType = "id"
+			}
+
+			ident := t.ConsumeIdent()
+
+			t.Tokens = append(t.Tokens, &FlagedStringToken{
+				Value: ident,
+				Id:    Token_Hash,
+				Flag:  flagType,
+			})
+
+			return nil
+		}
+
+		t.Tokens = append(t.Tokens, &RuneToken{Id: Token_Delim, Value: char})
 	case char == '(':
-		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Pren_Open})
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Pren_Open})
 		t.pos++
 	case char == ')':
-		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Pren_Close})
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Pren_Close})
 		t.pos++
 	case char == '+':
 		/*
@@ -62,10 +82,10 @@ func (t *Tokenizer) consumeToken() error {
 			consume a numeric token, and return it.
 		*/
 
-		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.Tokens = append(t.Tokens, &RuneToken{Id: Token_Delim, Value: char})
 		t.pos++
 	case char == ',':
-		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Comma})
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Comma})
 		t.pos++
 	case char == '-':
 		/*
@@ -81,7 +101,7 @@ func (t *Tokenizer) consumeToken() error {
 				consume an ident-like token,
 				and return it.
 		*/
-		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.Tokens = append(t.Tokens, &RuneToken{Id: Token_Delim, Value: char})
 		t.pos++
 	case char == '.':
 		/*
@@ -90,13 +110,13 @@ func (t *Tokenizer) consumeToken() error {
 			consume a numeric token, and return it.
 		*/
 
-		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.Tokens = append(t.Tokens, &RuneToken{Id: Token_Delim, Value: char})
 		t.pos++
 	case char == ':':
-		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Colon})
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Colon})
 		t.pos++
 	case char == ';':
-		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Semicolon})
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Semicolon})
 		t.pos++
 	case char == '<':
 
@@ -109,7 +129,7 @@ func (t *Tokenizer) consumeToken() error {
 			return nil
 		}
 
-		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.Tokens = append(t.Tokens, &RuneToken{Id: Token_Delim, Value: char})
 		t.pos++
 	case char == '@':
 
@@ -119,13 +139,13 @@ func (t *Tokenizer) consumeToken() error {
 			the returned value, and return it.
 		*/
 		// create at keyword token else
-		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.Tokens = append(t.Tokens, &RuneToken{Id: Token_Delim, Value: char})
 		t.pos++
 	case char == '[':
-		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Square_Bracket_Open})
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Square_Bracket_Open})
 		t.pos++
 	case char == ']':
-		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Square_Bracket_Close})
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Square_Bracket_Close})
 		t.pos++
 	case char == '\\':
 
@@ -136,44 +156,179 @@ func (t *Tokenizer) consumeToken() error {
 		*/
 		// Otherwise, this is a parse error.
 		// Return a <delim-token> with its value set to the current input code point.
-		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.Tokens = append(t.Tokens, &RuneToken{Id: Token_Delim, Value: char})
 		t.pos++
 	case char == '{':
-		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Clearly_Open})
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Clearly_Open})
 		t.pos++
 	case char == '}':
-		t.tokens = append(t.tokens, &EmptyToken{Id: Token_Clearly_Close})
+		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Clearly_Close})
 		t.pos++
 	case unicode.IsDigit(char):
-		t.consumeNumeric()
+		t.ConsumeNumeric()
 	case unicode.IsLetter(char) || char == '_':
-		t.consumeIdentLike()
+		t.ConsumeIdentLike()
 	default:
-		t.tokens = append(t.tokens, &RuneToken{Id: Token_Delim, Value: char})
+		t.Tokens = append(t.Tokens, &RuneToken{Id: Token_Delim, Value: char})
 		t.pos++
 	}
 
 	return nil
 }
 
-func (t *Tokenizer) consumeWhilespace() {}
-func (t *Tokenizer) consumeComment()    {}
-func (t *Tokenizer) consumeNumeric()    {}
-func (t *Tokenizer) consumeIdentLike()  {}
-func (t *Tokenizer) consumeString()     {}
-func (t *Tokenizer) consumeUrl()        {}
-func (t *Tokenizer) consumeBadUrl()     {}
-func (t *Tokenizer) consumeEscaped()    {}
-func (t *Tokenizer) consumeIdent()      {}
-func (t *Tokenizer) consumeNumber()     {}
+func (t *Tokenizer) ConsumeWhilespace() {
+	for !t.eof() && unicode.IsSpace(t.data[t.pos]) {
+		t.pos++
+	}
+}
+func (t *Tokenizer) ConsumeComment() {
+	t.pos += 2
 
-func (t *Tokenizer) checkNextTwo()   {}
-func (t *Tokenizer) checkNextThree() {}
+	for !t.eof() && !t.CheckNextTwo('*', '/') {
+		t.pos += 1
+	}
 
-func (t *Tokenizer) eof() bool {
-	return t.pos >= t.len-1
+	if t.CheckNextTwo('*', '/') {
+		t.pos += 2
+	}
+}
+func (t *Tokenizer) ConsumeNumeric()   {}
+func (t *Tokenizer) ConsumeIdentLike() {}
+func (t *Tokenizer) ConsumeString() {
+	delim := t.data[t.pos]
+	t.pos++
+
+	content := []rune{}
+
+	for {
+		switch {
+		case t.eof():
+			// This is a parse error. Return the <string-token>.
+			t.Tokens = append(t.Tokens, &StringToken{Id: Token_String, Value: content})
+			return
+		case t.data[t.pos] == delim:
+			t.pos++
+			// finish
+			t.Tokens = append(t.Tokens, &StringToken{Id: Token_String, Value: content})
+			return
+		case t.data[t.pos] == '\n':
+			// This is a parse error. Reconsume the current input code point, create a <bad-string-token>, and return it.
+			panic("TODO implement newline in string. see: https://www.w3.org/TR/css-syntax-3/#consume-string-token")
+		case t.data[t.pos] == '\\':
+			panic("TODO implement escape parseing. see: https://www.w3.org/TR/css-syntax-3/#consume-string-token")
+		default:
+			content = append(content, t.data[t.pos])
+			t.pos++
+		}
+	}
+
+}
+func (t *Tokenizer) ConsumeUrl()    {}
+func (t *Tokenizer) ConsumeBadUrl() {}
+func (t *Tokenizer) ConsumeEscaped() []rune {
+
+	target := []rune{}
+
+	if t.eof() {
+		target = append(target, '�')
+	} else if unicode.IsDigit(t.data[t.pos]) || unicode.IsLetter(t.data[t.pos]) {
+		// prase hex digit
+	} else {
+		target = append(target, t.data[t.pos])
+	}
+
+	return target
+}
+func (t *Tokenizer) ConsumeIdent() []rune {
+
+	result := []rune{}
+	// TODO: add escape parsing. See https://www.w3.org/TR/css-syntax-3/#consume-an-ident-sequence
+	for !t.eof() && isIdentCodePoint(t.data[t.pos]) {
+		result = append(result, t.data[t.pos])
+		t.pos++
+	}
+
+	return result
+}
+func (t *Tokenizer) ConsumeNumber() {}
+
+func (t *Tokenizer) CheckNextTwo(a rune, b rune) bool {
+	if t.pos+1 >= t.len {
+		return false
+	}
+
+	return t.data[t.pos] == a && t.data[t.pos+1] == b
+}
+func (t *Tokenizer) CheckNextThree(test func(rune) bool) bool {
+	if t.pos+3 > t.len-1 {
+		return false
+	}
+
+	for i := 0; i < 3; i++ {
+		if !test(t.data[t.pos+i]) {
+			return false
+		}
+	}
+
+	return true
 }
 
+func (t *Tokenizer) eof() bool {
+	return t.pos >= t.len
+}
+
+// https://www.w3.org/TR/css-syntax-3/#starts-with-a-valid-escape
+func (t *Tokenizer) AreNextValidEscape(offset int) bool {
+	if (offset+t.pos)+1 >= t.len-1 {
+		return false
+	}
+
+	if t.data[(offset+t.pos)] != '\\' {
+		return false
+	}
+
+	if t.data[(offset+t.pos)+1] == '\n' {
+		return false
+	}
+
+	return true
+}
+
+// https://www.w3.org/TR/css-syntax-3/#would-start-an-identifier
+func (t *Tokenizer) DoNextStartIdentSequence() bool {
+	if t.pos+2 >= t.len-1 {
+		return false
+	}
+	char := t.data[t.pos]
+	switch {
+	case char == '-':
+		if isIdentStartCodePoint(t.data[t.pos+1]) || t.data[t.pos+1] == '-' {
+			return true
+		}
+
+		if t.AreNextValidEscape(1) {
+			return true
+		}
+
+		return false
+	case isIdentStartCodePoint(char):
+		return true
+	case char == '\\':
+		return t.AreNextValidEscape(0)
+	default:
+		return false
+	}
+}
+
+func isIdentStartCodePoint(value rune) bool {
+	return unicode.IsLetter(value) || value == '_'
+}
+
+func isIdentCodePoint(value rune) bool {
+	return isIdentStartCodePoint(value) || unicode.IsDigit(value) || value == '-'
+}
+
+/*
 func eof(len int, pos int) bool {
 	return pos >= len-1
 }
@@ -195,12 +350,12 @@ func RunnerTokenizer(input string) ([]Token, error) {
 	var commentEnd = []rune{'*', '/'}
 
 	data := []rune(input)
-	tokens := []Token{}
+	Tokens := []Token{}
 	dataLen := len(data)
 	pos := 0
 	for pos < dataLen {
 		if eof(dataLen, pos) {
-			tokens = append(tokens, &EmptyToken{Id: Token_EOF})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_EOF})
 			break
 		}
 		char := data[pos]
@@ -213,11 +368,11 @@ func RunnerTokenizer(input string) ([]Token, error) {
 			for !startsWith(&commentEnd, &data, dataLen, pos) {
 				pos++
 				if eof(dataLen, pos) {
-					return nil, fmt.Errorf("expected '*/' but found EOF token")
+					return nil, fmt.Errorf("expected '' but found EOF token")
 				}
 			}
 
-			pos += 2 // eat '*/'
+			pos += 2 // eat ''
 
 		// https://www.w3.org/TR/css-syntax-3/#whitespace-diagram
 		// https://www.w3.org/TR/css-syntax-3/#whitespace
@@ -230,7 +385,7 @@ func RunnerTokenizer(input string) ([]Token, error) {
 				}
 			}
 			//fmt.Printf("%U\n", data[pos])
-			tokens = append(tokens, &EmptyToken{Id: Token_Whitespace})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Whitespace})
 		// https://www.w3.org/TR/css-syntax-3/#escape-diagram
 		// https://www.w3.org/TR/css-syntax-3/#string-token-diagram
 		// https://www.w3.org/TR/css-syntax-3/#consume-string-token
@@ -244,7 +399,7 @@ func RunnerTokenizer(input string) ([]Token, error) {
 				if eof(dataLen, pos) {
 					pos++
 					// create string token
-					tokens = append(tokens, &StringToken{
+					Tokens = append(Tokens, &StringToken{
 						Id:    Token_String,
 						Value: codePoints,
 					})
@@ -252,7 +407,7 @@ func RunnerTokenizer(input string) ([]Token, error) {
 				}
 				if data[pos] == i {
 					pos++ // eat '\'' or '\"'
-					tokens = append(tokens, &StringToken{
+					Tokens = append(Tokens, &StringToken{
 						Id:    Token_String,
 						Value: codePoints,
 					})
@@ -261,7 +416,7 @@ func RunnerTokenizer(input string) ([]Token, error) {
 
 				if data[pos] == '\n' {
 					pos++
-					tokens = append(tokens, &EmptyToken{Id: Token_Bad_String})
+					Tokens = append(Tokens, &EmptyToken{Id: Token_Bad_String})
 					break // parser error create bad string token
 				}
 				if data[pos] == '\\' {
@@ -281,7 +436,7 @@ func RunnerTokenizer(input string) ([]Token, error) {
 						code point to the <string-token>’s value.
 
 						https://www.w3.org/TR/css-syntax-3/#consume-escaped-code-point
-					*/
+
 					return nil, fmt.Errorf("escaped code point is not fully implemented")
 				}
 
@@ -293,45 +448,45 @@ func RunnerTokenizer(input string) ([]Token, error) {
 		case char == '#':
 			pos++ //eat '#'
 
-			tokens = append(tokens, &RuneToken{Id: Token_Delim, Value: '#'})
+			Tokens = append(Tokens, &RuneToken{Id: Token_Delim, Value: '#'})
 		case char == '(':
-			tokens = append(tokens, &EmptyToken{Id: Token_Pren_Open})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Pren_Open})
 			pos++
 		case char == ')':
-			tokens = append(tokens, &EmptyToken{Id: Token_Pren_Close})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Pren_Close})
 			pos++
 		case char == '+':
 			//
 		case char == ',':
-			tokens = append(tokens, &EmptyToken{Id: Token_Comma})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Comma})
 			pos++
 		case char == '-':
 			//
 		case char == '.':
 			//
 		case char == ':':
-			tokens = append(tokens, &EmptyToken{Id: Token_Colon})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Colon})
 			pos++
 		case char == ';':
-			tokens = append(tokens, &EmptyToken{Id: Token_Semicolon})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Semicolon})
 			pos++
 		case char == '<':
 			//
 		case char == '@':
 			//
 		case char == '[':
-			tokens = append(tokens, &EmptyToken{Id: Token_Square_Bracket_Open})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Square_Bracket_Open})
 			pos++
 		case char == '\\':
 			//
 		case char == ']':
-			tokens = append(tokens, &EmptyToken{Id: Token_Square_Bracket_Close})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Square_Bracket_Close})
 			pos++
 		case char == '{':
-			tokens = append(tokens, &EmptyToken{Id: Token_Clearly_Open})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Clearly_Open})
 			pos++
 		case char == '}':
-			tokens = append(tokens, &EmptyToken{Id: Token_Clearly_Close})
+			Tokens = append(Tokens, &EmptyToken{Id: Token_Clearly_Close})
 			pos++
 		// https://www.w3.org/TR/css-syntax-3/#digit
 		case unicode.IsDigit(char):
@@ -340,7 +495,7 @@ func RunnerTokenizer(input string) ([]Token, error) {
 		case unicode.IsLetter(char) || char == '_':
 			// https://www.w3.org/TR/css-syntax-3/#consume-an-ident-like-token
 		default:
-			tokens = append(tokens, &RuneToken{
+			Tokens = append(Tokens, &RuneToken{
 				Id:    Token_Delim,
 				Value: char,
 			})
@@ -348,7 +503,7 @@ func RunnerTokenizer(input string) ([]Token, error) {
 		}
 	}
 
-	return tokens, nil
+	return Tokens, nil
 }
 
 // https://www.w3.org/TR/css-syntax-3/#escape-diagram
@@ -363,23 +518,23 @@ func consumeString(data *[]rune, dataLen int, pos int) {
 		if eof(dataLen, pos) {
 			offset++
 			// create string token
-			/*tokens = append(tokens, &StringToken{
+			/*Tokens = append(Tokens, &StringToken{
 				Id:    Token_String,
 				Value: codePoints,
-			})*/
+			})
 			break
 		}
 		if (*data)[offset] == delim {
 			offset++ // eat '\'' or '\"'
-			/*tokens = append(tokens, &StringToken{
+			/*Tokens = append(Tokens, &StringToken{
 				Id:    Token_String,
 				Value: codePoints,
-			})*/
+			})
 			break
 		}
 		if (*data)[offset] == '\n' {
 			offset++
-			//tokens = append(tokens, &EmptyToken{Id: Token_Bad_String})
+			//Tokens = append(Tokens, &EmptyToken{Id: Token_Bad_String})
 			break // parser error create bad string token
 		}
 		if (*data)[offset] == '\\' {
@@ -393,13 +548,13 @@ func consumeString(data *[]rune, dataLen int, pos int) {
 				continue
 			}
 
-			/*
+
 				Otherwise, (the stream starts with a valid escape)
 				consume an escaped code point and append the returned
 				code point to the <string-token>’s value.
 
 				https://www.w3.org/TR/css-syntax-3/#consume-escaped-code-point
-			*/
+
 			//return nil, fmt.Errorf("escaped code point is not fully implemented")
 		}
 
@@ -408,4 +563,4 @@ func consumeString(data *[]rune, dataLen int, pos int) {
 
 	}
 
-}
+}*/
