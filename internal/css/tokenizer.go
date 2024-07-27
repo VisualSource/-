@@ -563,15 +563,3 @@ func isIdentStartCodePoint(value rune) bool {
 func isIdentCodePoint(value rune) bool {
 	return isIdentStartCodePoint(value) || unicode.IsDigit(value) || value == '-'
 }
-
-func sliceEqual(a, b []rune) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
-}

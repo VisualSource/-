@@ -35,10 +35,30 @@ const (
 	Token_Clearly_Close        TokenType = 22
 	Token_EOF                  TokenType = 23
 	Token_Number               TokenType = 24
+
+	TSimpleBlack TokenType = 25
+	TFunction    TokenType = 26
 )
 
 type Token interface {
 	GetId() TokenType
+}
+
+type FunctionBlock struct {
+	Args []Token
+}
+
+func (f *FunctionBlock) GetId() TokenType {
+	return TFunction
+}
+
+type SimpleBlock struct {
+	Tokens    []Token
+	BlockType TokenType
+}
+
+func (s *SimpleBlock) GetId() TokenType {
+	return TSimpleBlack
 }
 
 type NumberToken struct {
