@@ -71,7 +71,7 @@ func TestParseStylesheet(t *testing.T) {
 			background-color: lightgreen;
 		}
 	}
-	`)
+	`, 0)
 	if err != nil {
 		t.Fatalf("%s", err)
 	}

@@ -2,6 +2,7 @@ package plex
 
 import (
 	"sort"
+	plex_css "visualsource/plex/internal/css"
 
 	"github.com/moznion/go-optional"
 )
@@ -98,18 +99,19 @@ func CreateStyleNode(node Node, props PropertyMap, children []StyledNode) Styled
 }
 
 type MatchedRule struct {
-	specificity Specificity
-	rule        Rule
+	specificity plex_css.Specificity
+	rule        plex_css.Rule
+	Orgin       uint
 }
 
 // #region-start utility
 
-func matchRule(el *ElementNode, rule Rule) optional.Option[MatchedRule] {
+func matchRule(el *ElementNode, rule plex_css.Rule) optional.Option[MatchedRule] {
 
-	for _, selector := range rule.selectors {
+	for _, selector := range rule.Selector {
 		if el.Matches(&selector) {
 			return optional.Some(MatchedRule{
-				specificity: selector.Specificity(),
+				specificity: selector.GetSpecificity(),
 				rule:        rule,
 			})
 		}
@@ -118,21 +120,23 @@ func matchRule(el *ElementNode, rule Rule) optional.Option[MatchedRule] {
 	return nil
 }
 
-func matchRules(el *ElementNode, stylesheet *Stylesheet) []MatchedRule {
+func matchRules(el *ElementNode, stylesheet *plex_css.Stylesheet) []MatchedRule {
 	rules := []MatchedRule{}
 
-	for _, rule := range stylesheet.rules {
+	for _, rule := range stylesheet.Rules {
 		result := matchRule(el, rule)
 		if result.IsSome() {
-			rules = append(rules, result.Unwrap())
+			item := result.Unwrap()
+			item.Orgin = stylesheet.Origin
+			rules = append(rules, item)
 		}
 	}
 
 	return rules
 }
 
-func specifiedValues(el *ElementNode, stylesheets []Stylesheet) PropertyMap {
-	values := map[string]CssValue{}
+func specifiedValues(el *ElementNode, stylesheets []plex_css.Stylesheet) PropertyMap {
+	values := PropertyMap{}
 
 	rules := []MatchedRule{}
 	for _, stylesheet := range stylesheets {
@@ -143,11 +147,11 @@ func specifiedValues(el *ElementNode, stylesheets []Stylesheet) PropertyMap {
 		a := rules[i]
 		b := rules[j]
 
-		return a.rule.origin < b.rule.origin || a.specificity.A < b.specificity.A || a.specificity.B < b.specificity.B || a.specificity.C < b.specificity.C
+		return a.Orgin < b.Orgin || a.specificity.A < b.specificity.A || a.specificity.B < b.specificity.B || a.specificity.C < b.specificity.C
 	})
 
 	for _, matched := range rules {
-		for _, dec := range matched.rule.declartions {
+		for _, dec := range matched.rule.Block {
 			values[dec.name] = dec.value
 		}
 	}
@@ -155,7 +159,7 @@ func specifiedValues(el *ElementNode, stylesheets []Stylesheet) PropertyMap {
 	return values
 }
 
-func StyleTree(root Node, stylesheet []Stylesheet) StyledNode {
+func StyleTree(root Node, stylesheet []plex_css.Stylesheet) StyledNode {
 
 	var specified PropertyMap
 	children := []StyledNode{}

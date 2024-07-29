@@ -1,6 +1,8 @@
 package plex
 
 import (
+	plex_css "visualsource/plex/internal/css"
+
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -44,7 +46,7 @@ func ParseStylesFromDocument(node Node) (StyledNode, sdl.Color) {
 	if document, ok := node.(*ElementNode); ok {
 		selector := CreateNewSelector("style", "", []string{})
 		styleTags := document.QuerySelectorAll(&selector)
-		stylesheets := []Stylesheet{}
+		stylesheets := []plex_css.Stylesheet{}
 
 		for _, style := range styleTags {
 			css, err := cssParser.Parse(style.GetTextContent(), 1)

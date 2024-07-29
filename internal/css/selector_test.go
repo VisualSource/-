@@ -280,3 +280,82 @@ func TestParseCombinator(t *testing.T) {
 		t.Fatalf("Invalid output")
 	}
 }
+
+// region-start simple-selector
+
+func TestParseSimpleSelector_TYPE(t *testing.T) {
+	tokens := []plex_css.Token{
+		&plex_css.StringToken{
+			Id:    plex_css.Token_Ident,
+			Value: "div",
+		},
+	}
+
+	result, err := plex_css.ParseSimpleSelector(&tokens)
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
+
+	if result.TagName != "div" {
+		t.Fatalf("Invalid selector")
+	}
+}
+
+func TestParseSimpleSelector_ID(t *testing.T) {
+	tokens := []plex_css.Token{
+		&plex_css.FlagedStringToken{
+			Id:    plex_css.Token_Hash,
+			Value: "someId",
+			Flag:  "id",
+		},
+	}
+
+	result, err := plex_css.ParseSimpleSelector(&tokens)
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
+
+	if result.Id != "someId" {
+		t.Fatalf("Invalid selector")
+	}
+}
+
+func TestParseSimpleSelector_CLASS(t *testing.T) {
+	tokens := []plex_css.Token{
+		&plex_css.RuneToken{
+			Id:    plex_css.Token_Delim,
+			Value: '.',
+		},
+		&plex_css.StringToken{
+			Id:    plex_css.Token_Ident,
+			Value: "someClass",
+		},
+	}
+
+	result, err := plex_css.ParseSimpleSelector(&tokens)
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
+
+	if !result.Classes.ContainsOne("someClass") {
+		t.Fatalf("Invalid selector")
+	}
+}
+
+func TestParseSimpleSelector_STAR(t *testing.T) {
+	tokens := []plex_css.Token{
+		&plex_css.RuneToken{
+			Id:    plex_css.Token_Delim,
+			Value: '*',
+		},
+	}
+
+	result, err := plex_css.ParseSimpleSelector(&tokens)
+	if err != nil {
+		t.Fatalf("%s", err)
+	}
+
+	if result.TagName != "*" {
+		t.Fatalf("Invalid selector")
+	}
+}

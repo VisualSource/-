@@ -3,40 +3,45 @@ package plex_css
 import (
 	"fmt"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/moznion/go-optional"
 )
 
-func ParseForgivingSelectorList(value []Token) []Selector {
-
-	valueLen := len(value)
-	selectors := []Selector{}
-	pos := 0
-
-	for pos < valueLen {
-		result, err := praseComplexSelector(&value, valueLen, &pos)
-		if err != nil {
-			fmt.Printf("Selector parse error: %s", err)
-			continue
-		}
-		selectors = append(selectors, result)
+func ParseSimpleSelector(tokens *[]Token) (Selector, error) {
+	selector := Selector{
+		Classes: mapset.NewSet[string](),
 	}
 
-	return selectors
-}
+	len := len(*tokens)
+	pos := 0
 
-func praseComplexSelector(tokens *[]Token, len int, pos *int) (Selector, error) {
-
-	selector := Selector{}
-
-	parseCompundSelector(tokens, pos, len)
-
-	for (*pos) < len {
-		_, err := ParseCombinator(tokens, pos, len)
+	if isWQStart(tokens, &pos, len) {
+		namespace, tagname, err := ParseTypeSelector(tokens, &pos, len)
 		if err != nil {
 			return selector, err
 		}
-		parseCompundSelector(tokens, pos, len)
+		selector.Namespace = namespace
+		selector.TagName = tagname
+		return selector, nil
 	}
+
+	id, class, pesudoClass, attr, err := ParseSubclassSelector(tokens, &pos, len)
+	if err != nil {
+		return selector, err
+	}
+
+	id.IfSome(func(v string) {
+		selector.Id = v
+	})
+	class.IfSome(func(v string) {
+		selector.Classes.Add(v)
+	})
+	pesudoClass.IfSome(func(v PesudoClass) {
+		selector.PseudoClasses = append(selector.PseudoClasses, v)
+	})
+	attr.IfSome(func(v SelectorAttribute) {
+		selector.Attributes[v.Value] = v
+	})
 
 	return selector, nil
 }
@@ -44,22 +49,116 @@ func praseComplexSelector(tokens *[]Token, len int, pos *int) (Selector, error) 
 /*
 Grammer:
 
-		<compound-selector> = [ <type-selector>? <subclass-selector>*
-	                        [ <pseudo-element-selector> <pseudo-class-selector>* ]* ]!
+		<subclass-selector> = <id-selector> | <class-selector> |
+	                      <attribute-selector> | <pseudo-class-selector>
 */
-func parseCompundSelector(tokens *[]Token, pos *int, len int) {
+func ParseSubclassSelector(tokens *[]Token, pos *int, len int) (optional.Option[string], optional.Option[string], optional.Option[PesudoClass], optional.Option[SelectorAttribute], error) {
 
-	/*parseTypeSelector()
-	for {
-		parseTypeSelector()
+	switch (*tokens)[(*pos)].GetId() {
+	case Token_Hash:
+		id, err := ParseIdSelector(tokens, pos, len)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		return optional.Some(id), nil, nil, nil, nil
+	case Token_Delim:
+		v := (*tokens)[(*pos)].(*RuneToken)
+		switch v.Value {
+		case '.':
+			class, err := ParseClassSelector(tokens, pos, len)
+			if err != nil {
+				return nil, nil, nil, nil, err
+			}
+			return nil, optional.Some(class), nil, nil, nil
+		case ':':
+			el, err := ParsePseudoClassSelector(tokens, pos, len)
+			if err != nil {
+				return nil, nil, nil, nil, err
+			}
+
+			return nil, nil, optional.Some(el), nil, nil
+		}
+	case TSimpleBlack:
+		attr, err := ParseAttributeSelector(tokens, pos, len)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		return nil, nil, nil, optional.Some(attr), nil
 	}
 
-	for {
-		parsePseudoElementSelector()
-		for {
-			parsePseudoClassSelector()
-		}
-	}*/
+	return nil, nil, nil, nil, nil
+}
+
+func ParsePseudoElementSelector(tokens *[]Token, pos *int, len int) (PesudoElement, error) {
+	return PesudoElement{}, fmt.Errorf("TODO: implement pesudo elements")
+}
+
+func ParsePseudoClassSelector(tokens *[]Token, pos *int, len int) (PesudoClass, error) {
+	return PesudoClass{}, fmt.Errorf("TODO: implement pesudo classes")
+}
+
+/*
+Grammer:
+
+	<attribute-selector> = '[' <wq-name> ']' | '[' <wq-name> <attr-matcher> [ <string-token> | <ident-token> ] <attr-modifier>? ']'
+*/
+func ParseAttributeSelector(tokens *[]Token, pos *int, len int) (SelectorAttribute, error) {
+	return SelectorAttribute{}, nil
+}
+
+/*
+Grammer:
+
+	<class-selector> = '.' <ident-token>
+*/
+func ParseClassSelector(tokens *[]Token, pos *int, len int) (string, error) {
+	if (*pos)+1 > len {
+		return "", fmt.Errorf("eof")
+	}
+
+	delim := (*tokens)[(*pos)]
+
+	if delim.GetId() != Token_Delim {
+		return "", fmt.Errorf("was expecting a delim token but found: %d", delim.GetId())
+	}
+
+	d := delim.(*RuneToken)
+
+	if d.Value != '.' {
+		return "", fmt.Errorf("was expecting a rune of '.' but got: %q", d.Value)
+	}
+
+	token := (*tokens)[(*pos)+1]
+
+	if token.GetId() != Token_Ident {
+		return "", fmt.Errorf("was expecting a ident token but found: %d", token.GetId())
+	}
+
+	v := token.(*StringToken)
+	(*pos) += 2
+	return v.Value, nil
+}
+
+/*
+Grammer:
+
+	<id-selector> = <hash-token>
+*/
+func ParseIdSelector(tokens *[]Token, pos *int, len int) (string, error) {
+	if (*pos) > len {
+		return "", fmt.Errorf("eof")
+	}
+
+	token := (*tokens)[*pos]
+
+	if token.GetId() != Token_Hash {
+		return "", fmt.Errorf("was expecting a hash token but found: %d", token.GetId())
+	}
+
+	v := token.(*FlagedStringToken)
+
+	(*pos)++
+	return v.Value, nil
 }
 
 /*
@@ -227,4 +326,21 @@ func ParseNSPrefix(tokens *[]Token, pos *int, len int) (string, error) {
 	}
 
 	return "", fmt.Errorf("invalid namepsace prefix")
+}
+
+func isWQStart(tokens *[]Token, pos *int, len int) bool {
+	if (*pos) > len {
+		return true
+	}
+
+	switch (*tokens)[*pos].GetId() {
+	case Token_Ident:
+		return true
+	case Token_Delim:
+		v := (*tokens)[*pos].(*RuneToken)
+		return v.Value == '*' || v.Value == '|'
+	default:
+		return false
+	}
+
 }

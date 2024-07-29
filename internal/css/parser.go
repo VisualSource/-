@@ -11,7 +11,7 @@ type CssParser struct {
 	input []Token
 }
 
-func (p *CssParser) ParseStylesheet(value string) (Stylesheet, error) {
+func (p *CssParser) ParseStylesheet(value string, origin uint) (Stylesheet, error) {
 	p.pos = 0
 	tokenizer := Tokenizer{}
 
@@ -31,6 +31,7 @@ func (p *CssParser) ParseStylesheet(value string) (Stylesheet, error) {
 		Rules:    rules,
 		AtRules:  atRules,
 		TopLevel: true,
+		Origin:   origin,
 	}, nil
 }
 func (p *CssParser) ParseDeclarationsList(value string) ([]Declaration, error) {
@@ -135,6 +136,7 @@ func (p *CssParser) ConsumeAtRule() (AtRule, error) {
 func (p *CssParser) ConsumeQualifiedRule() (Rule, error) {
 
 	rule := Rule{}
+	prelude := []Token{}
 
 	for {
 		switch {
@@ -152,6 +154,14 @@ func (p *CssParser) ConsumeQualifiedRule() (Rule, error) {
 			declarations, _ := declarationParser.ConsumeDeclarationsList()
 			rule.Block = declarations
 
+			selector, err := ParseSimpleSelector(&prelude)
+
+			if err != nil {
+				return Rule{}, err
+			}
+
+			rule.Selector = append(rule.Selector, selector)
+
 			return rule, nil
 		case p.isCurrent(TSimpleBlack):
 			if b, ok := p.input[p.pos].(*SimpleBlock); ok && b.BlockType == Token_Clearly_Close {
@@ -167,7 +177,7 @@ func (p *CssParser) ConsumeQualifiedRule() (Rule, error) {
 			if err != nil {
 				return Rule{}, err
 			}
-			rule.Prelude = append(rule.Prelude, result)
+			prelude = append(prelude, result)
 		}
 	}
 }

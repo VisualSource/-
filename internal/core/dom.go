@@ -3,6 +3,8 @@ package plex
 import (
 	"strings"
 
+	plex_css "visualsource/plex/internal/css"
+
 	mapset "github.com/deckarep/golang-set/v2"
 )
 
@@ -60,7 +62,7 @@ type ElementNode struct {
 	children []Node
 }
 
-func (n *ElementNode) QuerySelector(selector *Selector) (*ElementNode, error) {
+func (n *ElementNode) QuerySelector(selector *plex_css.Selector) (*ElementNode, error) {
 
 	for _, child := range n.children {
 		if child.GetType() == NodeType_Text || child.GetType() == NodeType_Comment {
@@ -85,7 +87,7 @@ func (n *ElementNode) QuerySelector(selector *Selector) (*ElementNode, error) {
 	return nil, nil
 }
 
-func (n *ElementNode) QuerySelectorAll(selector *Selector) []*ElementNode {
+func (n *ElementNode) QuerySelectorAll(selector *plex_css.Selector) []*ElementNode {
 	result := []*ElementNode{}
 
 	for _, child := range n.GetChildren() {
@@ -141,19 +143,21 @@ func (n *ElementNode) GetClassList() mapset.Set[string] {
 }
 
 // https://www.w3.org/TR/selectors-4/#match-against-element
-func (n *ElementNode) Matches(selector *Selector) bool {
+func (n *ElementNode) Matches(selector *plex_css.Selector) bool {
 
-	if selector.Id != "" && selector.Id == n.GetId() {
-		return true
-	}
+	matchesClasses := n.GetClassList().IsSubset(selector.Classes)
+	matchesId := selector.Id != "" && selector.Id == n.GetId()
+	matchesTag := false
 
 	if selector.TagName != "" && selector.TagName == n.tagName {
-		return true
+		matchesTag = true
+	} else if selector.TagName == "*" {
+		matchesTag = true
 	}
 
-	classes := n.GetClassList()
+	// match attr and psuedo class/elements
 
-	return classes.ContainsAny(selector.Classes...)
+	return matchesTag || matchesClasses || matchesId
 }
 
 func (n *ElementNode) GetTagName() string {
