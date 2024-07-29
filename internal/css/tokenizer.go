@@ -48,7 +48,10 @@ func (t *Tokenizer) ConsumeToken() error {
 	case t.CheckNextTwo('/', '*'):
 		t.ConsumeComment()
 	case char == '"' || char == '\'':
-		t.ConsumeString()
+		err := t.ConsumeString()
+		if err != nil {
+			return err
+		}
 	case unicode.IsSpace(char):
 		t.ConsumeWhilespace()
 		t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Whitespace})
@@ -64,7 +67,7 @@ func (t *Tokenizer) ConsumeToken() error {
 			ident := t.ConsumeIdent()
 
 			t.Tokens = append(t.Tokens, &FlagedStringToken{
-				Value: ident,
+				Value: string(ident),
 				Id:    Token_Hash,
 				Flag:  flagType,
 			})
@@ -150,7 +153,7 @@ func (t *Tokenizer) ConsumeToken() error {
 
 			t.Tokens = append(t.Tokens, &StringToken{
 				Id:    Token_At_Keyword,
-				Value: value,
+				Value: string(value),
 			})
 
 			return nil
@@ -224,7 +227,7 @@ func (t *Tokenizer) ConsumeNumeric() {
 			Id:       Token_Dimension,
 			Value:    value,
 			DataType: dataType,
-			Unit:     ident,
+			Unit:     string(ident),
 		})
 		return
 	}
@@ -266,7 +269,7 @@ func (t *Tokenizer) ConsumeIdentLike() {
 			if (t.data[t.pos] == '"' || t.data[t.pos] == '\'') || (t.data[t.pos+1] == '"' || t.data[t.pos+1] == '\'') {
 				t.Tokens = append(t.Tokens, &StringToken{
 					Id:    Token_Function,
-					Value: value,
+					Value: string(value),
 				})
 				return
 			}
@@ -282,17 +285,17 @@ func (t *Tokenizer) ConsumeIdentLike() {
 		t.pos++
 		t.Tokens = append(t.Tokens, &StringToken{
 			Id:    Token_Function,
-			Value: value,
+			Value: string(value),
 		})
 		return
 	}
 
 	t.Tokens = append(t.Tokens, &StringToken{
 		Id:    Token_Ident,
-		Value: value,
+		Value: string(value),
 	})
 }
-func (t *Tokenizer) ConsumeString() {
+func (t *Tokenizer) ConsumeString() error {
 	delim := t.data[t.pos]
 	t.pos++
 
@@ -302,25 +305,25 @@ func (t *Tokenizer) ConsumeString() {
 		switch {
 		case t.eof():
 			// This is a parse error. Return the <string-token>.
-			t.Tokens = append(t.Tokens, &StringToken{Id: Token_String, Value: content})
-			return
+			t.Tokens = append(t.Tokens, &StringToken{Id: Token_String, Value: string(content)})
+			return nil
 		case t.data[t.pos] == delim:
 			t.pos++
 			// finish
-			t.Tokens = append(t.Tokens, &StringToken{Id: Token_String, Value: content})
-			return
+			t.Tokens = append(t.Tokens, &StringToken{Id: Token_String, Value: string(content)})
+			return nil
 		case t.data[t.pos] == '\n':
 			// This is a parse error. Reconsume the current input code point, create a <bad-string-token>, and return it.
-			panic("TODO implement newline in string. see: https://www.w3.org/TR/css-syntax-3/#consume-string-token")
+			return fmt.Errorf("TODO implement newline in string. see: https://www.w3.org/TR/css-syntax-3/#consume-string-token")
 		case t.data[t.pos] == '\\':
-			panic("TODO implement escape parseing. see: https://www.w3.org/TR/css-syntax-3/#consume-string-token")
+			return fmt.Errorf("TODO implement escape parseing. see: https://www.w3.org/TR/css-syntax-3/#consume-string-token")
 		default:
 			content = append(content, t.data[t.pos])
 			t.pos++
 		}
 	}
 }
-func (t *Tokenizer) ConsumeUrl() {
+func (t *Tokenizer) ConsumeUrl() error {
 	t.ConsumeWhilespace()
 
 	reper := []rune{}
@@ -347,10 +350,13 @@ L:
 			}
 
 			t.Tokens = append(t.Tokens, &EmptyToken{Id: Token_Bad_Url})
-			return
+			return nil
 		case t.IsCurrent('\\'):
 			t.pos++
-			data := t.ConsumeEscaped()
+			data, err := t.ConsumeEscaped()
+			if err != nil {
+				return err
+			}
 			reper = append(reper, data...)
 		default:
 			reper = append(reper, t.data[t.pos])
@@ -360,11 +366,13 @@ L:
 
 	t.Tokens = append(t.Tokens, &StringToken{
 		Id:    Token_Url,
-		Value: reper,
+		Value: string(reper),
 	})
+
+	return nil
 }
 
-func (t *Tokenizer) ConsumeEscaped() []rune {
+func (t *Tokenizer) ConsumeEscaped() ([]rune, error) {
 
 	target := []rune{}
 
@@ -372,12 +380,12 @@ func (t *Tokenizer) ConsumeEscaped() []rune {
 		target = append(target, '�')
 	} else if unicode.IsDigit(t.data[t.pos]) || unicode.IsLetter(t.data[t.pos]) {
 		// prase hex digit
-		panic("TODO: handle hex escape code")
+		return target, fmt.Errorf("TODO: handle hex escape code")
 	} else {
 		target = append(target, t.data[t.pos])
 	}
 
-	return target
+	return target, nil
 }
 func (t *Tokenizer) ConsumeIdent() []rune {
 
@@ -390,8 +398,8 @@ func (t *Tokenizer) ConsumeIdent() []rune {
 
 	return result
 }
-func (t *Tokenizer) ConsumeNumber() (float32, string) {
-	valueType := "integer"
+func (t *Tokenizer) ConsumeNumber() (float32, NumberType) {
+	var valueType NumberType = NumberType_Integer
 
 	reper := []rune{}
 
@@ -410,7 +418,7 @@ func (t *Tokenizer) ConsumeNumber() (float32, string) {
 		t.pos++
 		reper = append(reper, t.data[t.pos])
 		t.pos++
-		valueType = "number"
+		valueType = NumberType_Number
 		for !t.eof() && unicode.IsDigit(t.data[t.pos]) {
 			reper = append(reper, t.data[t.pos])
 			t.pos++
@@ -428,7 +436,7 @@ func (t *Tokenizer) ConsumeNumber() (float32, string) {
 			t.pos++
 		}
 
-		valueType = "number"
+		valueType = NumberType_Number
 
 		for !t.eof() && unicode.IsDigit(t.data[t.pos]) {
 			reper = append(reper, t.data[t.pos])

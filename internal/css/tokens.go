@@ -1,12 +1,11 @@
 package plex_css
 
 type TokenType = uint8
-
-type TokenNumberType = string
+type NumberType = uint8
 
 const (
-	TokenNumber_Integer = "integer"
-	TokenNumber_Number  = "number"
+	NumberType_Integer NumberType = 0
+	NumberType_Number  NumberType = 1
 )
 
 const (
@@ -45,6 +44,7 @@ type Token interface {
 }
 
 type FunctionBlock struct {
+	Name string
 	Args []Token
 }
 
@@ -64,8 +64,8 @@ func (s *SimpleBlock) GetId() TokenType {
 type NumberToken struct {
 	Id       TokenType
 	Value    float32
-	DataType TokenNumberType
-	Unit     []rune
+	DataType NumberType
+	Unit     string
 }
 
 func (t *NumberToken) GetId() TokenType {
@@ -74,7 +74,7 @@ func (t *NumberToken) GetId() TokenType {
 
 type StringToken struct {
 	Id    TokenType
-	Value []rune
+	Value string
 }
 
 func (t *StringToken) GetId() TokenType {
@@ -100,7 +100,7 @@ func (t *RuneToken) GetId() TokenType {
 
 type FlagedStringToken struct {
 	Id    TokenType
-	Value []rune
+	Value string
 	Flag  string
 }
 

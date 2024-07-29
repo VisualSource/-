@@ -1,5 +1,10 @@
 package plex_css
 
+import (
+	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/moznion/go-optional"
+)
+
 type Stylesheet struct {
 	Rules    []Rule
 	AtRules  []AtRule
@@ -20,5 +25,18 @@ type AtRule struct {
 
 type Rule struct {
 	Prelude []Token
-	Block   SimpleBlock
+	Block   []Declaration
+}
+
+type SelectorAttribute struct {
+	Operation uint8
+	Value     string
+}
+type Selector struct {
+	TagName        string
+	Namespace      optional.Option[string]
+	Attributes     map[string]SelectorAttribute
+	PseudoClasses  []string
+	PseudoElements []string
+	Classes        mapset.Set[string]
 }

@@ -125,7 +125,9 @@ func (p *CssParser) ConsumeAtRule() (AtRule, error) {
 			if err != nil {
 				return AtRule{}, err
 			}
-			rule.Prelude = append(rule.Prelude, value)
+			if value.GetId() != Token_Whitespace {
+				rule.Prelude = append(rule.Prelude, value)
+			}
 		}
 	}
 
@@ -143,11 +145,21 @@ func (p *CssParser) ConsumeQualifiedRule() (Rule, error) {
 			if err != nil {
 				return Rule{}, err
 			}
-			rule.Block = block
+
+			declarationParser := CssParser{}
+			declarationParser.input = block.Tokens
+			declarationParser.len = len(block.Tokens)
+			declarations, _ := declarationParser.ConsumeDeclarationsList()
+			rule.Block = declarations
+
 			return rule, nil
 		case p.isCurrent(TSimpleBlack):
 			if b, ok := p.input[p.pos].(*SimpleBlock); ok && b.BlockType == Token_Clearly_Close {
-				rule.Block = *b
+				declarationParser := CssParser{}
+				declarationParser.input = (*b).Tokens
+				declarationParser.len = len((*b).Tokens)
+				declarations, _ := declarationParser.ConsumeDeclarationsList()
+				rule.Block = declarations
 				return rule, nil
 			}
 		default:
@@ -193,15 +205,12 @@ func (p *CssParser) ConsumeDeclarationsList() ([]Declaration, []AtRule) {
 					'color' is the ident and the ':' would be the value from ConsumeComponentValue(https://www.w3.org/TR/css-syntax-3/#consume-a-component-value)
 					and calling consumeDeclaration would return a declaration of color with no value
 			*/
-
 			if !p.isCurrent(Token_Semicolon) || !p.isCurrent(Token_EOF) {
 				dec, err := p.ConsumeDeclaration()
 				if err == nil {
 					declarations = append(declarations, dec)
 				}
-
 			}
-
 		default:
 			p.pos++
 			if !p.isCurrent(Token_Semicolon) || !p.isCurrent(Token_EOF) {
@@ -209,7 +218,6 @@ func (p *CssParser) ConsumeDeclarationsList() ([]Declaration, []AtRule) {
 				p.ConsumeComponentValue()
 			}
 		}
-
 	}
 
 }
@@ -304,45 +312,53 @@ func (p *CssParser) ConsumeSimpleBlock() (SimpleBlock, error) {
 
 	tokens := []Token{}
 
-	for !p.eof() || !p.isCurrent(bracketEnd) {
+	for {
+		switch {
+		case p.isCurrent(bracketEnd):
+			p.pos++ // eat end bracket
+			return SimpleBlock{Tokens: tokens, BlockType: bracketEnd}, nil
+		case p.eof():
+			return SimpleBlock{Tokens: tokens, BlockType: bracketEnd}, fmt.Errorf("found EOF")
+		default:
+			result, err := p.ConsumeComponentValue()
 
-		result, err := p.ConsumeComponentValue()
+			if err != nil {
+				return SimpleBlock{}, err
+			}
 
-		if err != nil {
-			return SimpleBlock{}, err
+			tokens = append(tokens, result)
 		}
-
-		tokens = append(tokens, result)
 	}
-
-	if p.eof() {
-		return SimpleBlock{Tokens: tokens, BlockType: bracketEnd}, fmt.Errorf("found EOF")
-	}
-
-	p.pos++ // eat end bracket
-
-	return SimpleBlock{Tokens: tokens, BlockType: bracketEnd}, nil
 }
 func (p *CssParser) ConsumeFunction() (Token, error) {
 
+	var name string
+	token := p.input[p.pos]
+	if v, ok := token.(*StringToken); ok {
+		name = v.Value
+	}
+
+	p.pos++
+
 	args := []Token{}
 
-	for !p.eof() || !p.isCurrent(Token_Pren_Close) {
+	for !p.eof() && !p.isCurrent(Token_Pren_Close) {
 
 		result, err := p.ConsumeComponentValue()
 
 		if err != nil {
 			return nil, err
 		}
-
-		args = append(args, result)
+		if result.GetId() != Token_Whitespace {
+			args = append(args, result)
+		}
 	}
 
 	if p.eof() {
-		return &FunctionBlock{Args: args}, fmt.Errorf("found EOF")
+		return &FunctionBlock{Args: args, Name: name}, fmt.Errorf("found EOF")
 	}
 
-	return &FunctionBlock{Args: args}, nil
+	return &FunctionBlock{Args: args, Name: name}, nil
 }
 
 func (p *CssParser) isCurrent(t TokenType) bool {

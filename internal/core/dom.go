@@ -140,6 +140,7 @@ func (n *ElementNode) GetClassList() mapset.Set[string] {
 	return mapset.NewSet(items...)
 }
 
+// https://www.w3.org/TR/selectors-4/#match-against-element
 func (n *ElementNode) Matches(selector *Selector) bool {
 
 	if selector.Id != "" && selector.Id == n.GetId() {

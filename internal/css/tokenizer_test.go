@@ -78,7 +78,7 @@ func TestConsumeToken_StringDouble(t *testing.T) {
 
 	if e, ok := result[0].(*plex_css.StringToken); ok {
 
-		if !equal(e.Value, []rune{'I', ' ', 'A', 'm', ' ', 'a', ' ', 's', 't', 'r', 'i', 'n', 'g'}) {
+		if e.Value != "I Am a string" {
 			t.Fatalf("Value does not match input")
 		}
 
@@ -109,7 +109,7 @@ func TestConsumeToken_StringSingle(t *testing.T) {
 
 	if e, ok := result[0].(*plex_css.StringToken); ok {
 
-		if !equal(e.Value, []rune{'I', ' ', 'A', 'm', ' ', 'a', ' ', 's', 't', 'r', 'i', 'n', 'g'}) {
+		if e.Value != "I Am a string" {
 			t.Fatalf("Value does not match input")
 		}
 
@@ -172,7 +172,7 @@ func TestConsumeToken_HashLong(t *testing.T) {
 	}
 
 	if e, ok := result[0].(*plex_css.FlagedStringToken); ok {
-		if !equal(e.Value, []rune{'I', 'm', 'A', 'I', 'd'}) {
+		if e.Value != "ImAId" {
 			t.Fatalf("Value does not match input")
 		}
 		if e.Flag != "id" {
@@ -205,7 +205,7 @@ func TestConsumeToken_HashShort(t *testing.T) {
 	}
 
 	if e, ok := result[0].(*plex_css.FlagedStringToken); ok {
-		if !equal(e.Value, []rune{'I', 'D'}) {
+		if e.Value != "ID" {
 			t.Fatalf("Value does not match input")
 		}
 		if e.Flag != "unrestricted" {
@@ -259,8 +259,8 @@ func TestConsumeNumber_Int(t *testing.T) {
 
 	value, dataType := tokenizer.ConsumeNumber()
 
-	if dataType != "integer" {
-		t.Fatalf("Expected dataType to be of integer not %s", dataType)
+	if dataType != plex_css.NumberType_Integer {
+		t.Fatalf("Expected dataType to be of integer not %d", dataType)
 	}
 
 	if value != 566 {
@@ -273,8 +273,8 @@ func TestConsumeNumber_Float(t *testing.T) {
 
 	value, dataType := tokenizer.ConsumeNumber()
 
-	if dataType != "number" {
-		t.Fatalf("Expected dataType to be of number not %s", dataType)
+	if dataType != plex_css.NumberType_Number {
+		t.Fatalf("Expected dataType to be of number not %d", dataType)
 	}
 
 	if value != 566.3 {
@@ -287,8 +287,8 @@ func TestConsumeNumber_Exponent(t *testing.T) {
 
 	value, dataType := tokenizer.ConsumeNumber()
 
-	if dataType != "number" {
-		t.Fatalf("Expected dataType to be of number not %s", dataType)
+	if dataType != plex_css.NumberType_Number {
+		t.Fatalf("Expected dataType to be of number not %d", dataType)
 	}
 
 	if value != 566e4 {
@@ -301,8 +301,8 @@ func TestConsumeNumber_Signed(t *testing.T) {
 
 	value, dataType := tokenizer.ConsumeNumber()
 
-	if dataType != "integer" {
-		t.Fatalf("Expected dataType to be of integer not %s", dataType)
+	if dataType != plex_css.NumberType_Integer {
+		t.Fatalf("Expected dataType to be of integer not %d", dataType)
 	}
 
 	if value != -566 {
@@ -363,10 +363,10 @@ func TestConsumeToken_PlusNumber(t *testing.T) {
 		if e.Value != 4445.0 {
 			t.Fatalf("Value does not match input")
 		}
-		if e.DataType != "number" {
+		if e.DataType != plex_css.NumberType_Number {
 			t.Fatalf("Value does not match input")
 		}
-		if !equal(e.Unit, []rune{}) {
+		if e.Unit != "" {
 			t.Fatalf("Value does not match input")
 		}
 	} else {
@@ -399,10 +399,10 @@ func TestConsumeToken_Minus(t *testing.T) {
 		if e.Value != -4445.0 {
 			t.Fatalf("Value does not match input")
 		}
-		if e.DataType != "number" {
+		if e.DataType != plex_css.NumberType_Number {
 			t.Fatalf("Value does not match input")
 		}
-		if !equal(e.Unit, []rune{}) {
+		if e.Unit != "" {
 			t.Fatalf("Value does not match input")
 		}
 	} else {
@@ -669,7 +669,7 @@ func TestConsumeToken_StopNumber(t *testing.T) {
 		if e.Value != 0.45 {
 			t.Fatalf("Value does not match input")
 		}
-		if e.DataType != "number" {
+		if e.DataType != plex_css.NumberType_Number {
 			t.Fatalf("Value does not match input")
 		}
 	} else {
@@ -817,18 +817,4 @@ func TestParse(t *testing.T) {
 	if len(result) != 127 {
 		t.Fatalf("Missing token expected 127 tokens got: %d", len(result))
 	}
-}
-
-// #region start UTILS
-
-func equal(a, b []rune) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
 }
