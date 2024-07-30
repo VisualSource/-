@@ -285,7 +285,7 @@ func (p *CssParser) ConsumeDeclaration() (Declaration, error) {
 	}
 
 	return Declaration{
-		Value:     decValue,
+		Value:     ParseCssValue(decValue),
 		Name:      name,
 		Important: important,
 	}, nil
@@ -363,6 +363,7 @@ func (p *CssParser) ConsumeFunction() (Token, error) {
 			args = append(args, result)
 		}
 	}
+	p.pos++
 
 	if p.eof() {
 		return &FunctionBlock{Args: args, Name: name}, fmt.Errorf("found EOF")

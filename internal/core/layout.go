@@ -2,6 +2,8 @@ package plex
 
 // https://github.com/moznion/go-optional
 import (
+	plex_css "visualsource/plex/internal/css"
+
 	"github.com/moznion/go-optional"
 )
 
@@ -36,12 +38,15 @@ func (l *LayoutBox) layoutBlock(containing Dimensions) {
 
 func (l *LayoutBox) calculateBlockHeight() {
 	style := l.node.Unwrap()
-	prop := style.GetProp("height")
+	prop := style.props.GetProp("height")
 	if prop.IsNone() {
 		return
 	}
-	if i, ok := prop.Unwrap().(CssLengthValue); ok {
-		l.dimensions.Content.H = i.ToPx()
+
+	c := prop.Unwrap()
+
+	if i, ok := c.GetValue().(*plex_css.CssDimention); ok {
+		l.dimensions.Content.H = i.AsPx()
 	}
 }
 
@@ -54,19 +59,17 @@ func (l *LayoutBox) layoutBlockChildren() {
 
 func (l *LayoutBox) calculateBlockPosition(containing Dimensions) {
 	style := l.node.Unwrap()
-	zero := optional.Some[CssValue](CssLengthValue{
-		Value: 0,
-		Unit:  CssUnit_PX,
-	})
+	zero := plex_css.CreateCssDimention(0, plex_css.CssUnit_PX)
 
-	l.dimensions.Margin.Top = AsCssLengthValue(style.Lookup("margin-top", "margin").Or(zero).Unwrap())
-	l.dimensions.Margin.Bottom = AsCssLengthValue(style.Lookup("margin-bttom", "margin").Or(zero).Unwrap())
+	style.props.Lookup("margin-top", "margin")
+	l.dimensions.Margin.Top = style.props.ResolveLookupAsDimention("margin-top", "margin").Or(zero).UnwrapAsPtr().AsPx()
+	l.dimensions.Margin.Bottom = style.props.ResolveLookupAsDimention("margin-bottom", "margin").Or(zero).UnwrapAsPtr().AsPx()
 
-	l.dimensions.Border.Top = AsCssLengthValue(style.Lookup("border-top-width", "border-width").Or(zero).Unwrap())
-	l.dimensions.Border.Bottom = AsCssLengthValue(style.Lookup("border-bottom-width", "border-with").Or(zero).Unwrap())
+	l.dimensions.Border.Top = style.props.ResolveLookupAsDimention("border-top-width", "border-width").Or(zero).UnwrapAsPtr().AsPx()
+	l.dimensions.Border.Bottom = style.props.ResolveLookupAsDimention("border-bottom-width", "border-with").Or(zero).UnwrapAsPtr().AsPx()
 
-	l.dimensions.Padding.Top = AsCssLengthValue(style.Lookup("padding-top", "padding").Or(zero).Unwrap())
-	l.dimensions.Padding.Bottom = AsCssLengthValue(style.Lookup("padding-bottom", "padding").Or(zero).Unwrap())
+	l.dimensions.Padding.Top = style.props.ResolveLookupAsDimention("padding-top", "padding").Or(zero).UnwrapAsPtr().AsPx()
+	l.dimensions.Padding.Bottom = style.props.ResolveLookupAsDimention("padding-bottom", "padding").Or(zero).UnwrapAsPtr().AsPx()
 
 	l.dimensions.Content.X = containing.Content.X +
 		l.dimensions.Margin.Left +
@@ -83,114 +86,119 @@ func (l *LayoutBox) calculateBlockPosition(containing Dimensions) {
 func (l *LayoutBox) calculateBlockWidth(containing Dimensions) {
 	style := l.node.Unwrap()
 
-	width := style.GetProp("width").Or(optional.Some[CssValue]("auto")).Unwrap()
+	var width plex_css.CssValue
+	widthDec := style.props.GetProp("width") //.Or(optional.Some[CssValue]("auto")).Unwrap()
+	if widthDec.IsSome() {
+		v := widthDec.Unwrap()
+		width = v.GetValueAt(0).Or(optional.Some[plex_css.CssValue](&plex_css.CssKeyword{Value: "auto"})).Unwrap()
+	} else {
+		width = &plex_css.CssKeyword{Value: "auto"}
+	}
 
-	zero := optional.Some[CssValue](CssLengthValue{
-		Value: 0,
-		Unit:  CssUnit_PX,
-	})
+	zero := optional.Some[plex_css.CssValue](&plex_css.CssDimention{Value: 0, Unit: plex_css.CssUnit_PX})
 
-	marginLeft := style.Lookup("margin-left", "margin").Or(zero).Unwrap()
-	marginRight := style.Lookup("margin-right", "margin").Or(zero).Unwrap()
-	borderLeft := style.Lookup("border-left-width", "border-width").Or(zero).Unwrap()
-	borderRight := style.Lookup("border-right-width", "border-width").Or(zero).Unwrap()
-	paddingLeft := style.Lookup("padding-left", "padding").Or(zero).Unwrap()
-	paddingRight := style.Lookup("padding-right", "padding").Or(zero).Unwrap()
+	marginLeft := style.props.ResolveLookupToCssValue("margin-left", "margin").Or(zero).Unwrap()
+	marginRight := style.props.ResolveLookupToCssValue("margin-right", "margin").Or(zero).Unwrap()
+	borderLeft := style.props.ResolveLookupToCssValue("border-left-width", "border-width").Unwrap()
+	borderRight := style.props.ResolveLookupToCssValue("border-right-width", "border-width").Unwrap()
+	paddingLeft := style.props.ResolveLookupToCssValue("padding-left", "padding").Unwrap()
+	paddingRight := style.props.ResolveLookupToCssValue("padding-right", "padding").Unwrap()
 
-	items := [7]CssValue{marginLeft, marginRight, borderLeft, borderRight, paddingLeft, paddingRight, width}
+	items := []*plex_css.CssValue{&marginLeft, &marginRight, &borderLeft, &borderRight, &paddingLeft, &paddingRight, &width}
 	var total float32 = 0.0
-
-	for i := 0; i < len(items); i++ {
-		if value, ok := items[i].(CssLengthValue); ok {
-			total += value.ToPx()
+	for _, i := range items {
+		if plex_css.IsCssValue(*i, plex_css.TCssValue_DIMENTION) {
+			v := (*i).(*plex_css.CssDimention)
+			total += v.AsPx()
 		}
 	}
 
-	if !IsCssKeyword(width, "auto") && total > containing.Content.W {
-		if IsCssKeyword(marginLeft, "auto") {
-			marginLeft = CssLengthValue{
+	if !plex_css.IsCssKeyword(width, "auto") && total > containing.Content.W {
+		if plex_css.IsCssKeyword(marginLeft, "auto") {
+			marginLeft = &plex_css.CssDimention{
 				Value: 0.0,
-				Unit:  CssUnit_PX,
+				Unit:  plex_css.CssUnit_PX,
 			}
 		}
-		if IsCssKeyword(marginRight, "auto") {
-			marginRight = CssLengthValue{
+		if plex_css.IsCssKeyword(marginRight, "auto") {
+			marginRight = &plex_css.CssDimention{
 				Value: 0.0,
-				Unit:  CssUnit_PX,
+				Unit:  plex_css.CssUnit_PX,
 			}
 		}
 	}
 
 	underflow := containing.Content.W - total
 
-	widthIsAuto := IsCssKeyword(width, "auto")
-	marginLeftIsAuto := IsCssKeyword(marginLeft, "auto")
-	marginRightIsAuto := IsCssKeyword(marginRight, "auto")
+	widthIsAuto := plex_css.IsCssKeyword(width, "auto")
+	marginLeftIsAuto := plex_css.IsCssKeyword(marginLeft, "auto")
+	marginRightIsAuto := plex_css.IsCssKeyword(marginRight, "auto")
 
 	if !widthIsAuto && !marginLeftIsAuto && !marginRightIsAuto {
-		marginRight = CssLengthValue{
+		marginRight = &plex_css.CssDimention{
 			Value: 0.0,
-			Unit:  CssUnit_PX,
+			Unit:  plex_css.CssUnit_PX,
 		}
 	} else if !widthIsAuto && !marginLeftIsAuto && marginRightIsAuto {
-		marginRight = CssLengthValue{
+		marginRight = &plex_css.CssDimention{
 			Value: underflow,
-			Unit:  CssUnit_PX,
+			Unit:  plex_css.CssUnit_PX,
 		}
 	} else if !widthIsAuto && marginLeftIsAuto && !marginRightIsAuto {
-		marginLeft = CssLengthValue{
+		marginLeft = &plex_css.CssDimention{
 			Value: underflow,
-			Unit:  CssUnit_PX,
+			Unit:  plex_css.CssUnit_PX,
 		}
 	} else if !widthIsAuto && marginLeftIsAuto && marginRightIsAuto {
-		marginLeft = CssLengthValue{
+		marginLeft = &plex_css.CssDimention{
 			Value: underflow / 2.0,
-			Unit:  CssUnit_PX,
+			Unit:  plex_css.CssUnit_PX,
 		}
-		marginRight = CssLengthValue{
+		marginRight = &plex_css.CssDimention{
 			Value: underflow / 2.0,
-			Unit:  CssUnit_PX,
+			Unit:  plex_css.CssUnit_PX,
 		}
 	} else if widthIsAuto {
 		if marginLeftIsAuto {
-			marginLeft = CssLengthValue{
+			marginLeft = &plex_css.CssDimention{
 				Value: 0.0,
-				Unit:  CssUnit_PX,
+				Unit:  plex_css.CssUnit_PX,
 			}
 		}
 		if marginRightIsAuto {
-			marginRight = CssLengthValue{
+			marginRight = &plex_css.CssDimention{
 				Value: 0.0,
-				Unit:  CssUnit_PX,
+				Unit:  plex_css.CssUnit_PX,
 			}
 		}
 
 		if underflow >= 0.0 {
-			width = CssLengthValue{
+			width = &plex_css.CssDimention{
 				Value: underflow,
-				Unit:  CssUnit_PX,
+				Unit:  plex_css.CssUnit_PX,
 			}
 		} else {
-			width = CssLengthValue{
+			width = &plex_css.CssDimention{
 				Value: underflow,
-				Unit:  CssUnit_PX,
+				Unit:  plex_css.CssUnit_PX,
 			}
+			a := marginRight.(*plex_css.CssDimention)
 
 			// right margin has been set to a css length value
-			marginRight = CssLengthValue{
-				Value: marginRight.(CssLengthValue).Value + underflow,
-				Unit:  CssUnit_PX,
+			marginRight = &plex_css.CssDimention{
+				Value: a.AsPx() + underflow,
+				Unit:  plex_css.CssUnit_PX,
 			}
 		}
 	}
 
-	l.dimensions.Content.W = AsCssLengthValue(width)
-	l.dimensions.Padding.Left = AsCssLengthValue(paddingLeft)
-	l.dimensions.Padding.Right = AsCssLengthValue(paddingRight)
-	l.dimensions.Border.Left = AsCssLengthValue(borderLeft)
-	l.dimensions.Border.Right = AsCssLengthValue(borderRight)
-	l.dimensions.Margin.Left = AsCssLengthValue(marginLeft)
-	l.dimensions.Margin.Right = AsCssLengthValue(marginRight)
+	l.dimensions.Content.W = plex_css.ResolveDimentionToPXFloat(width)
+	l.dimensions.Padding.Left = plex_css.ResolveDimentionToPXFloat(paddingLeft)
+	l.dimensions.Padding.Right = plex_css.ResolveDimentionToPXFloat(paddingRight)
+	l.dimensions.Border.Left = plex_css.ResolveDimentionToPXFloat(borderLeft)
+	l.dimensions.Border.Right = plex_css.ResolveDimentionToPXFloat(borderRight)
+	l.dimensions.Margin.Left = plex_css.ResolveDimentionToPXFloat(marginLeft)
+	l.dimensions.Margin.Right = plex_css.ResolveDimentionToPXFloat(marginRight)
 }
 
 func (l *LayoutBox) getInlineContainer() *LayoutBox {

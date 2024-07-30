@@ -37,11 +37,11 @@ func GetWindowDimentions(window *sdl.Window) Dimensions {
 	}
 }
 
-func ParseStylesFromDocument(node Node) (StyledNode, sdl.Color) {
+func ParseStylesFromDocument(node Node) (StyledNode, plex_css.CssColor) {
 	cssParser := plex_css.CssParser{}
 
 	var styletree StyledNode
-	color := sdl.Color{A: 255, R: 255, G: 255, B: 255}
+	color := plex_css.CSS_COLOR_KEYWORDS["white"]
 
 	if document, ok := node.(*ElementNode); ok {
 		selector := plex_css.Selector{TagName: "style"}
@@ -57,10 +57,14 @@ func ParseStylesFromDocument(node Node) (StyledNode, sdl.Color) {
 
 		styletree = StyleTree(node, stylesheets)
 
-		bgColor := styletree.Lookup("background-color", "background")
-		bgColor.IfSome(func(v CssValue) {
-			if c, ok := v.(sdl.Color); ok {
-				color = c
+		bgColor := styletree.props.Lookup("background-color")
+		bgColor.IfSome(func(v plex_css.Declaration) {
+			if c, ok := v.GetValue().(*plex_css.CssColor); ok {
+				color = *c
+			} else if c, ok := v.GetValue().(*plex_css.CssKeyword); ok {
+				c.ResolveColor().IfSome(func(v plex_css.CssColor) {
+					color = v
+				})
 			}
 		})
 	}

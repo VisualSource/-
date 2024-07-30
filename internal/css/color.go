@@ -1,9 +1,5 @@
 package plex_css
 
-import (
-	"github.com/gookit/goutil/mathutil"
-)
-
 var CSS_COLOR_KEYWORDS = map[string]CssColor{
 	"aliceblue":            {R: 240, G: 248, B: 255, A: 255},
 	"antiquewhite":         {R: 250, G: 235, B: 215, A: 255},
@@ -182,54 +178,4 @@ func HslToRgb(hue, sat, light int) (int, int, int) {
 	light /= 100
 
 	return f(0, hue, light, sat), f(8, hue, light, sat), f(4, hue, light, sat)
-}
-
-/*
-Source: https://www.w3.org/TR/css-color-4/#rgb-to-hsl
-*/
-func RgbToHsl(red, green, blue int) (int, int, int) {
-	valueMax := max(red, green, blue)
-	valueMin := min(red, green, blue)
-
-	var hue int
-	sat := 0
-	light := (valueMin + valueMax) / 2
-
-	d := valueMax - valueMin
-
-	if d != 0 {
-		if light == 0 || light == 1 {
-			sat = 0
-		} else {
-			sat = (valueMax - light) / min(light, 1-light)
-		}
-		switch valueMax {
-		case red:
-			var c int
-			if green < blue {
-				c = 6
-			} else {
-				c = 0
-			}
-
-			hue = (green-blue)/d + c
-		case green:
-			hue = (blue-red)/d + 2
-		case blue:
-			hue = (red-green)/d + 4
-		}
-
-		hue = hue * 60
-	}
-
-	if sat < 0 {
-		hue += 180
-		sat = mathutil.Abs(sat)
-	}
-
-	if hue >= 360 {
-		hue -= 360
-	}
-
-	return hue, sat * 100, light * 100
 }

@@ -145,7 +145,11 @@ func (n *ElementNode) GetClassList() mapset.Set[string] {
 // https://www.w3.org/TR/selectors-4/#match-against-element
 func (n *ElementNode) Matches(selector *plex_css.Selector) bool {
 
-	matchesClasses := n.GetClassList().IsSubset(selector.Classes)
+	matchesClasses := false
+	if selector.Classes != nil {
+		matchesClasses = n.GetClassList().IsSubset(selector.Classes)
+	}
+
 	matchesId := selector.Id != "" && selector.Id == n.GetId()
 	matchesTag := false
 
@@ -155,7 +159,7 @@ func (n *ElementNode) Matches(selector *plex_css.Selector) bool {
 		matchesTag = true
 	}
 
-	// match attr and psuedo class/elements
+	// TODO: match attr and psuedo class/elements
 
 	return matchesTag || matchesClasses || matchesId
 }

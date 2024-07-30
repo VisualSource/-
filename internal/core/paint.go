@@ -1,19 +1,21 @@
 package plex
 
 import (
+	plex_css "visualsource/plex/internal/css"
+
 	"github.com/moznion/go-optional"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
 type RenderSolidColor struct {
-	Color sdl.Color
+	Color plex_css.CssColor
 	Box   sdl.FRect
 }
 
 type RenderCommand interface {
 }
 
-func resolveColor(box *LayoutBox, key ...string) optional.Option[sdl.Color] {
+func resolveColor(box *LayoutBox, key ...string) optional.Option[plex_css.CssColor] {
 	if box.boxType == BoxType_AnonymousBlock {
 		return nil
 	}
@@ -24,20 +26,15 @@ func resolveColor(box *LayoutBox, key ...string) optional.Option[sdl.Color] {
 
 	style := box.node.Unwrap()
 
-	prop := style.Lookup(key...)
+	dec := style.props.Lookup(key...)
 
-	if prop.IsNone() {
+	if dec.IsNone() {
 		return nil
 	}
 
-	switch v := prop.Unwrap().(type) {
-	case string:
-		return nil
-	case sdl.Color:
-		return optional.Some(v)
-	default:
-		return nil
-	}
+	prop := dec.Unwrap()
+
+	return plex_css.ResolveCssValueToColor(prop.GetValue())
 }
 
 func renderBackground(list *[]RenderCommand, box *LayoutBox) {
@@ -132,7 +129,7 @@ func buildDisplayList(layout *LayoutBox) []RenderCommand {
 func printItem(renderer *sdl.Renderer, width float32, height float32, cmd RenderCommand) {
 
 	if v, ok := cmd.(RenderSolidColor); ok {
-		renderer.SetDrawColor(v.Color.R, v.Color.G, v.Color.B, 255)
+		renderer.SetDrawColor(uint8(v.Color.R), uint8(v.Color.G), uint8(v.Color.B), uint8(v.Color.A))
 		renderer.FillRectF(&sdl.FRect{
 			Y: v.Box.Y,
 			X: v.Box.X,
@@ -143,7 +140,7 @@ func printItem(renderer *sdl.Renderer, width float32, height float32, cmd Render
 
 }
 
-func Print(layout *LayoutBox, renderer *sdl.Renderer, window *sdl.Window, windowBgColor sdl.Color) {
+func Print(layout *LayoutBox, renderer *sdl.Renderer, window *sdl.Window, windowBgColor plex_css.CssColor) {
 	displayList := buildDisplayList(layout)
 
 	w, h := window.GetSize()
@@ -151,7 +148,7 @@ func Print(layout *LayoutBox, renderer *sdl.Renderer, window *sdl.Window, window
 	fw := float32(w)
 	fh := float32(h)
 
-	renderer.SetDrawColor(windowBgColor.R, windowBgColor.G, windowBgColor.B, 255)
+	renderer.SetDrawColor(uint8(windowBgColor.R), uint8(windowBgColor.G), uint8(windowBgColor.B), 255)
 	renderer.FillRect(&sdl.Rect{
 		H: h,
 		W: w,

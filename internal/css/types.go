@@ -14,8 +14,18 @@ type Stylesheet struct {
 
 type Declaration struct {
 	Name      string
-	Value     []Token
+	Value     []CssValue
 	Important bool
+}
+
+func (d *Declaration) GetValue() CssValue {
+	return d.Value[0]
+}
+func (d *Declaration) GetValueAt(i int) optional.Option[CssValue] {
+	if i >= len(d.Value) {
+		return nil
+	}
+	return optional.Some(d.Value[i])
 }
 
 type AtRule struct {
@@ -84,6 +94,10 @@ type Specificity struct {
 	C uint
 }
 
-func (s *Specificity) Compare(p *Specificity) bool {
+func (s *Specificity) Greater(p *Specificity) bool {
 	return s.A > p.A || s.B > p.B || s.C > p.C
+}
+
+func (s *Specificity) Less(p *Specificity) bool {
+	return s.A < p.A || s.B < p.B || s.C < p.C
 }
