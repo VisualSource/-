@@ -2,11 +2,29 @@ package plex
 
 import (
 	"os"
+	plex_css "visualsource/plex/internal/css"
 
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-func LoadLocalHtmlDocument(filepath string, renderer *sdl.Renderer) error {
+func LoadLocalStylesheet(filepath string) (plex_css.Stylesheet, error) {
+	content, err := os.ReadFile(filepath)
+	if err != nil {
+		return plex_css.Stylesheet{}, err
+	}
+
+	parser := plex_css.CssParser{}
+
+	result, err := parser.ParseStylesheet(string(content), 1)
+
+	if err != nil {
+		return plex_css.Stylesheet{}, err
+	}
+
+	return result, nil
+}
+
+func LoadLocalHtmlDocument(filepath string, renderer *sdl.Renderer, stylesheets []plex_css.Stylesheet) error {
 	window, err := renderer.GetWindow()
 	if err != nil {
 		return err
@@ -26,7 +44,7 @@ func LoadLocalHtmlDocument(filepath string, renderer *sdl.Renderer) error {
 	}
 
 	dim := GetWindowDimentions(window)
-	style, bgColor := ParseStylesFromDocument(dom)
+	style, bgColor := ParseStylesFromDocument(dom, stylesheets)
 	layout := LayoutTree(style, dim)
 
 	Print(&layout, renderer, window, bgColor)

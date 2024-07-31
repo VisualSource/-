@@ -67,6 +67,39 @@ func strToUnit(value string) CssUnit {
 	}
 }
 
+// https://stackoverflow.com/questions/54197913/parse-hex-string-to-image-color
+func parseHexValue(s string) CssValue {
+	color := CssColor{}
+
+	hexToByte := func(b byte) byte {
+		switch {
+		case b >= '0' && b <= '9':
+			return b - '0'
+		case b >= 'a' && b <= 'f':
+			return b - 'a' + 10
+		case b >= 'A' && b <= 'F':
+			return b - 'A' + 10
+		}
+		return 0
+	}
+
+	switch len(s) {
+	case 8: // Full RGBA
+		color.R = int(hexToByte(s[0])<<4 + hexToByte(s[1]))
+		color.G = int(hexToByte(s[2])<<4 + hexToByte(s[3]))
+		color.B = int(hexToByte(s[4])<<4 + hexToByte(s[5]))
+		color.A = int(hexToByte(s[6])<<4 + hexToByte(s[7]))
+		return &color
+	case 6: // Full RGB
+		color.R = int(hexToByte(s[0])<<4 + hexToByte(s[1]))
+		color.G = int(hexToByte(s[2])<<4 + hexToByte(s[3]))
+		color.B = int(hexToByte(s[4])<<4 + hexToByte(s[5]))
+		return &color
+	default:
+		return nil
+	}
+}
+
 func parseValue(tokens *[]Token, pos *int) CssValue {
 	token := (*tokens)[*pos]
 
@@ -74,6 +107,10 @@ func parseValue(tokens *[]Token, pos *int) CssValue {
 	case Token_Whitespace:
 		(*pos)++
 		return nil
+	case Token_Hash:
+		v := token.(*FlagedStringToken)
+		(*pos)++
+		return parseHexValue(v.Value)
 	case Token_Ident:
 		v := token.(*StringToken)
 		(*pos)++
@@ -124,7 +161,7 @@ func ParseCssValue(tokens []Token) []CssValue {
 			return values
 		}
 		switch tokens[pos].GetId() {
-		case Token_Whitespace, Token_Ident, TFunction:
+		case Token_Whitespace, Token_Ident, TFunction, Token_Hash:
 			value := parseValue(&tokens, &pos)
 			if value != nil {
 				values = append(values, value)
@@ -169,6 +206,9 @@ type CssValue interface {
 }
 
 func IsCssValue(v CssValue, t CssValueType) bool {
+	if v == nil {
+		return false
+	}
 	return v.GetType() == t
 }
 

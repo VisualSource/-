@@ -37,7 +37,7 @@ func GetWindowDimentions(window *sdl.Window) Dimensions {
 	}
 }
 
-func ParseStylesFromDocument(node Node) (StyledNode, plex_css.CssColor) {
+func ParseStylesFromDocument(node Node, stylesheets []plex_css.Stylesheet) (StyledNode, plex_css.CssColor) {
 	cssParser := plex_css.CssParser{}
 
 	var styletree StyledNode
@@ -46,7 +46,6 @@ func ParseStylesFromDocument(node Node) (StyledNode, plex_css.CssColor) {
 	if document, ok := node.(*ElementNode); ok {
 		selector := plex_css.Selector{TagName: "style"}
 		styleTags := document.QuerySelectorAll(&selector)
-		stylesheets := []plex_css.Stylesheet{}
 
 		for _, style := range styleTags {
 			css, err := cssParser.ParseStylesheet(style.GetTextContent(), 1)

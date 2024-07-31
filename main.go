@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	plex "visualsource/plex/internal/core"
+	plex_css "visualsource/plex/internal/css"
 
 	"github.com/gookit/goutil/dump"
 	"github.com/veandco/go-sdl2/sdl"
@@ -13,7 +14,12 @@ func main() {
 		opts.MaxDepth = 10
 	})
 
-	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+	stylesheet, err := plex.LoadLocalStylesheet("./resources/useragent.css")
+	if err != nil {
+		panic(err)
+	}
+
+	if err = sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
 	}
 	defer sdl.Quit()
@@ -29,7 +35,7 @@ func main() {
 		panic(err)
 	}
 
-	err = plex.LoadLocalHtmlDocument("./test.html", renderer)
+	err = plex.LoadLocalHtmlDocument("./test.html", renderer, []plex_css.Stylesheet{stylesheet})
 
 	if err != nil {
 		fmt.Printf("Render Error: %s", err)
@@ -45,7 +51,7 @@ func main() {
 			case *sdl.KeyboardEvent:
 				if t.Keysym.Sym == sdl.K_F5 && t.State == sdl.RELEASED {
 					fmt.Println("Reloading html Document")
-					err = plex.LoadLocalHtmlDocument("./test.html", renderer)
+					err = plex.LoadLocalHtmlDocument("./test.html", renderer, []plex_css.Stylesheet{stylesheet})
 					if err != nil {
 						fmt.Printf("Render Error: %s", err)
 					}
