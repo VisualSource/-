@@ -91,6 +91,7 @@ func run() int {
 
 	if htmlFile != "" {
 		sdl.Do(func() {
+
 			err = plex.LoadLocalHtmlDocument(htmlFile, renderer, []plex_css.Stylesheet{stylesheet})
 		})
 		if err != nil {

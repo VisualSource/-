@@ -21,8 +21,72 @@ func (l *LayoutBox) layout(containing Dimensions) {
 	switch l.boxType {
 	case BoxType_Block:
 		l.layoutBlock(containing)
+	case BoxType_Inline:
+		l.layoutInline(containing)
 	}
 }
+
+func (l *LayoutBox) layoutInline(containing Dimensions) {
+	if l.node.IsNone() {
+		return
+	}
+	l.calcuateInlineWidth(containing)
+	l.calcuateInlinePosition(containing)
+	l.calcuateInlineHeight()
+}
+
+// https://www.w3.org/TR/CSS2/visudet.html#inline-width
+func (l *LayoutBox) calcuateInlineWidth(containing Dimensions) {
+	// The 'width' property does not apply.
+	// A computed value of 'auto' for 'margin-left' or 'margin-right' becomes a used value of '0'.
+	style := l.node.Unwrap()
+
+	zero := optional.Some[plex_css.CssValue](&plex_css.CssDimention{Value: 0, Unit: plex_css.CssUnit_PX})
+	marginLeft := style.props.ResolveLookupToCssValue("margin-left", "margin").Or(zero).Unwrap()
+	marginRight := style.props.ResolveLookupToCssValue("margin-right", "margin").Or(zero).Unwrap()
+	borderLeft := style.props.ResolveLookupToCssValue("border-left-width", "border-width").Unwrap()
+	borderRight := style.props.ResolveLookupToCssValue("border-right-width", "border-width").Unwrap()
+	paddingLeft := style.props.ResolveLookupToCssValue("padding-left", "padding").Unwrap()
+	paddingRight := style.props.ResolveLookupToCssValue("padding-right", "padding").Unwrap()
+
+	items := []*plex_css.CssValue{&marginLeft, &marginRight, &borderLeft, &borderRight, &paddingLeft, &paddingRight}
+	var total float32 = 0.0
+	for _, i := range items {
+		if plex_css.IsCssValue(*i, plex_css.TCssValue_DIMENTION) {
+			v := (*i).(*plex_css.CssDimention)
+			total += v.AsPx()
+		}
+	}
+
+	//underflow := containing.Content.W - total
+
+	if plex_css.IsCssKeyword(marginLeft, "auto") {
+		marginLeft = &plex_css.CssDimention{
+			Value: 0.0,
+			Unit:  plex_css.CssUnit_PX,
+		}
+	}
+	if plex_css.IsCssKeyword(marginRight, "auto") {
+		marginRight = &plex_css.CssDimention{
+			Value: 0.0,
+			Unit:  plex_css.CssUnit_PX,
+		}
+	}
+
+	l.dimensions.Padding.Left = plex_css.ResolveDimentionToPXFloat(paddingLeft)
+	l.dimensions.Padding.Right = plex_css.ResolveDimentionToPXFloat(paddingRight)
+	l.dimensions.Border.Left = plex_css.ResolveDimentionToPXFloat(borderLeft)
+	l.dimensions.Border.Right = plex_css.ResolveDimentionToPXFloat(borderRight)
+	l.dimensions.Margin.Left = plex_css.ResolveDimentionToPXFloat(marginLeft)
+	l.dimensions.Margin.Right = plex_css.ResolveDimentionToPXFloat(marginRight)
+}
+
+func (l *LayoutBox) calcuateInlineHeight() {
+	// The 'height' property does not apply.
+	// based on font size
+}
+
+func (l *LayoutBox) calcuateInlinePosition(containing Dimensions) {}
 
 // Lay out a block-level element and its descendants.
 func (l *LayoutBox) layoutBlock(containing Dimensions) {
