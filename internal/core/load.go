@@ -4,6 +4,7 @@ import (
 	"os"
 	plex_css "visualsource/plex/internal/css"
 
+	"github.com/gookit/goutil/dump"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -46,6 +47,8 @@ func LoadLocalHtmlDocument(filepath string, renderer *sdl.Renderer, stylesheets 
 	dim := GetWindowDimentions(window)
 	style, bgColor := ParseStylesFromDocument(dom, stylesheets)
 	layout := LayoutTree(style, dim)
+
+	dump.P(layout)
 
 	Print(&layout, renderer, window, bgColor)
 

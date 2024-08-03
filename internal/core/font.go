@@ -14,14 +14,14 @@ func (c FontCache) RenderText(fontFamily string, fontSize int) {
 }
 
 // https://stackoverflow.com/questions/22886500/how-to-render-text-in-sdl2
-func (c FontCache) RenderTextWraped(renderer *sdl.Renderer, text string, color sdl.Color, fontFamily string, fontSize int, containerWidth int) error {
+func (c FontCache) RenderTextWraped(renderer *sdl.Renderer, target *sdl.FRect, text string, color sdl.Color, fontFamily string, fontSize int, containerWidth int) error {
 	font, ok := c[fontFamily]
 
 	if !ok {
-		return fmt.Errorf("No font family")
+		return fmt.Errorf("no font family")
 	}
 
-	surface, err := font.RenderUTF8BlendedWrapped(text, color, containerWidth)
+	surface, err := font.RenderUTF8Blended(text, color)
 	if err != nil {
 		return err
 	}
@@ -31,29 +31,24 @@ func (c FontCache) RenderTextWraped(renderer *sdl.Renderer, text string, color s
 	if err != nil {
 		return err
 	}
+	defer texture.Destroy()
 
-	out := sdl.FRect{}
-	if err = renderer.CopyF(texture, nil, &out); err != nil {
+	source := sdl.Rect{}
+	if err = renderer.CopyF(texture, &source, target); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c FontCache) LoadLocalFont(filePath string, fontSize int) {
-	/*font, err := ttf.OpenFont(filePath, fontSize)
+func (c FontCache) LoadLocalFont(filePath string, familyName string, fontSize int) error {
+	font, err := ttf.OpenFont(filePath, fontSize)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer font.Close()
 
-	f[filePath] = font
+	c[familyName] = font
 
-	surface, err := font.RenderUTF8BlendedWrapped("Test", sdl.Color{R: 255, G: 255, B: 255, A: 255}, 800)
-	if err != nil {
-		return nil, err
-	}
-	defer surface.Free()
-
-	return font, nil*/
+	return nil
 }

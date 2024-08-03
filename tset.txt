@@ -1,0 +1,366 @@
+plex.LayoutBox {
+  dimensions: plex.Dimensions {
+    Content: sdl.FRect {
+      X: float32(12),
+      Y: float32(12),
+      W: float32(776),
+      H: float32(40),
+    },
+    Padding: plex.EdgeSizes {
+      Left: float32(12),
+      Right: float32(12),
+      Top: float32(12),
+      Bottom: float32(12),
+    },
+    Border: plex.EdgeSizes {
+      Left: float32(0),
+      Right: float32(0),
+      Top: float32(0),
+      Bottom: float32(0),
+    },
+    Margin: plex.EdgeSizes {
+      Left: float32(0),
+      Right: float32(0),
+      Top: float32(0),
+      Bottom: float32(0),
+    },
+  },
+  boxType: plex.BoxType(0),
+  node: optional.Option[visualsource/plex/internal/core.StyledNode] [ #len=1,cap=1
+    plex.StyledNode {
+      node: &plex.ElementNode {
+        tagName: string("html"), #len=4
+        attr: map[string]string { #len=0
+        },
+        children: []plex.Node [ #len=2,cap=2
+          &plex.ElementNode {
+            tagName: string("head"), #len=4
+            attr: map[string]string { #len=0
+            },
+            children: []plex.Node [ #len=1,cap=1
+              &plex.ElementNode {
+                tagName: string("style"), #len=5
+                attr: map[string]string { #len=0
+                },
+                children: []plex.Node [ #len=1,cap=1
+                  &plex.TextNode {
+                    content: string("* { display: block; padding: 12px; }
+                                .a { background: lightcoral; }
+                                .b { background: orange; }
+                                .c { background: yellow; }
+                                .d { background: green; }
+                                .e { background: blue; }
+                                .f { background: purple; }
+                                .g { background: maroon; }
+                                .wold { display: inline; border-width: 1px;  border-color: black; }
+                        "), #len=339
+                    children: []plex.Node [ #len=0,cap=0
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          &plex.ElementNode {
+            tagName: string("body"), #len=4
+            attr: map[string]string { #len=0
+            },
+            children: []plex.Node [ #len=2,cap=2
+              &plex.CommentNode {
+                content: string("<div class="a">
+                                <div class="b">
+                                  <div class="c">
+                                        <div class="d">
+                                          <div class="e">
+                                                <div class="f">
+                                                  <div class="g">
+                                                        Hello,World
+                                                  </div>
+                                                </div>
+                                          </div>
+                                        </div>
+                                  </div>
+                                </div>
+                          </div>"), #len=270
+                children: []plex.Node [ #len=0,cap=0
+                ],
+              },
+              &plex.ElementNode {
+                tagName: string("span"), #len=4
+                attr: map[string]string { #len=1
+                  class: string("wold"), #len=4
+                },
+                children: []plex.Node [ #len=1,cap=1
+                  &plex.TextNode {
+                    content: string("Hello"), #len=5
+                    children: []plex.Node [ #len=0,cap=0
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      props: plex_css.CssPropertyMap { #len=2
+        display: plex_css.Declaration {
+          Name: string("display"), #len=7
+          Value: []plex_css.CssValue [ #len=1,cap=1
+            &plex_css.CssKeyword {
+              Value: string("block"), #len=5
+            },
+          ],
+          Important: bool(false),
+        },
+        padding: plex_css.Declaration {
+          Name: string("padding"), #len=7
+          Value: []plex_css.CssValue [ #len=1,cap=1
+            &plex_css.CssDimention {
+              Value: float32(12),
+              Unit: uint(16),
+            },
+          ],
+          Important: bool(false),
+        },
+      },
+      children: []plex.StyledNode [ #len=2,cap=2
+        plex.StyledNode {
+          node: &plex.ElementNode{(!CYCLIC REFERENCE!)}
+          props: plex_css.CssPropertyMap { #len=2
+            padding: plex_css.Declaration {
+              Name: string("padding"), #len=7
+              Value: []plex_css.CssValue [ #len=1,cap=1
+                plex_css.CssValue{(!CYCLIC REFERENCE!)}
+              ],
+              Important: bool(false),
+            },
+            display: plex_css.Declaration {
+              Name: string("display"), #len=7
+              Value: []plex_css.CssValue [ #len=1,cap=1
+                &plex_css.CssKeyword {
+                  Value: string("none"), #len=4
+                },
+              ],
+              Important: bool(false),
+            },
+          },
+          children: []plex.StyledNode [ #len=1,cap=1
+            plex.StyledNode {
+              node: &plex.ElementNode{(!CYCLIC REFERENCE!)}
+              props: plex_css.CssPropertyMap { #len=2
+                display: plex_css.Declaration {
+                  Name: string("display"), #len=7
+                  Value: []plex_css.CssValue [ #len=1,cap=1
+                    plex_css.CssValue{(!CYCLIC REFERENCE!)}
+                  ],
+                  Important: bool(false),
+                },
+                padding: plex_css.Declaration {
+                  Name: string("padding"), #len=7
+                  Value: []plex_css.CssValue [ #len=1,cap=1
+                    plex_css.CssValue{(!CYCLIC REFERENCE!)}
+                  ],
+                  Important: bool(false),
+                },
+              },
+              children: []plex.StyledNode [ #len=1,cap=1
+                plex.StyledNode {
+                  node: &plex.TextNode{(!CYCLIC REFERENCE!)}
+                  props: plex_css.CssPropertyMap { #len=0
+                  },
+                  children: []plex.StyledNode [ #len=0,cap=0
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        plex.StyledNode {
+          node: &plex.ElementNode{(!CYCLIC REFERENCE!)}
+          props: plex_css.CssPropertyMap { #len=3
+            padding: plex_css.Declaration {
+              Name: string("padding"), #len=7
+              Value: []plex_css.CssValue [ #len=1,cap=1
+                plex_css.CssValue{(!CYCLIC REFERENCE!)}
+              ],
+              Important: bool(false),
+            },
+            margin: plex_css.Declaration {
+              Name: string("margin"), #len=6
+              Value: []plex_css.CssValue [ #len=1,cap=1
+                &plex_css.CssDimention {
+                  Value: float32(8),
+                  Unit: uint(16),
+                },
+              ],
+              Important: bool(false),
+            },
+            display: plex_css.Declaration {
+              Name: string("display"), #len=7
+              Value: []plex_css.CssValue [ #len=1,cap=1
+                plex_css.CssValue{(!CYCLIC REFERENCE!)}
+              ],
+              Important: bool(false),
+            },
+          },
+          children: []plex.StyledNode [ #len=2,cap=2
+            plex.StyledNode {
+              node: &plex.CommentNode{(!CYCLIC REFERENCE!)}
+              props: plex_css.CssPropertyMap { #len=0
+              },
+              children: []plex.StyledNode [ #len=0,cap=0
+              ],
+            },
+            plex.StyledNode {
+              node: &plex.ElementNode{(!CYCLIC REFERENCE!)}
+              props: plex_css.CssPropertyMap { #len=4
+                display: plex_css.Declaration {
+                  Name: string("display"), #len=7
+                  Value: []plex_css.CssValue [ #len=1,cap=1
+                    &plex_css.CssKeyword {
+                      Value: inline(!OVER MAX DEPTH!),
+                    },
+                  ],
+                  Important: bool(false),
+                },
+                padding: plex_css.Declaration {
+                  Name: string("padding"), #len=7
+                  Value: []plex_css.CssValue [ #len=1,cap=1
+                    plex_css.CssValue{(!CYCLIC REFERENCE!)}
+                  ],
+                  Important: bool(false),
+                },
+                border-width: plex_css.Declaration {
+                  Name: string("border-width"), #len=12
+                  Value: []plex_css.CssValue [ #len=1,cap=1
+                    &plex_css.CssDimention {
+                      Value: <float32 Value>(!OVER MAX DEPTH!),
+                      Unit: <uint Value>(!OVER MAX DEPTH!),
+                    },
+                  ],
+                  Important: bool(false),
+                },
+                border-color: plex_css.Declaration {
+                  Name: string("border-color"), #len=12
+                  Value: []plex_css.CssValue [ #len=1,cap=1
+                    &plex_css.CssKeyword {
+                      Value: black(!OVER MAX DEPTH!),
+                    },
+                  ],
+                  Important: bool(false),
+                },
+              },
+              children: []plex.StyledNode [ #len=1,cap=1
+                plex.StyledNode {
+                  node: &plex.TextNode{(!CYCLIC REFERENCE!)}
+                  props: plex_css.CssPropertyMap { #len=0
+                  },
+                  children: []plex.StyledNode [ #len=0,cap=0
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  children: []plex.LayoutBox [ #len=1,cap=1
+    plex.LayoutBox {
+      dimensions: plex.Dimensions {
+        Content: sdl.FRect {
+          X: float32(24),
+          Y: float32(32),
+          W: float32(736),
+          H: float32(0),
+        },
+        Padding: plex.EdgeSizes {
+          Left: float32(12),
+          Right: float32(12),
+          Top: float32(12),
+          Bottom: float32(12),
+        },
+        Border: plex.EdgeSizes {
+          Left: float32(0),
+          Right: float32(0),
+          Top: float32(0),
+          Bottom: float32(0),
+        },
+        Margin: plex.EdgeSizes {
+          Left: float32(0),
+          Right: float32(0),
+          Top: float32(8),
+          Bottom: float32(8),
+        },
+      },
+      boxType: plex.BoxType(0),
+      node: optional.Option[visualsource/plex/internal/core.StyledNode] [ #len=1,cap=1
+        plex.StyledNode {
+          node: &plex.ElementNode{(!CYCLIC REFERENCE!)}
+          props: plex_css.CssPropertyMap { #len=3
+            display: plex_css.Declaration {
+              Name: string("display"), #len=7
+              Value: []plex_css.CssValue [ #len=1,cap=1
+                plex_css.CssValue{(!CYCLIC REFERENCE!)}
+              ],
+              Important: bool(false),
+            },
+            padding: plex_css.Declaration {
+              Name: string("padding"), #len=7
+              Value: []plex_css.CssValue [ #len=1,cap=1
+                plex_css.CssValue{(!CYCLIC REFERENCE!)}
+              ],
+              Important: bool(false),
+            },
+            margin: plex_css.Declaration {
+              Name: string("margin"), #len=6
+              Value: []plex_css.CssValue [ #len=1,cap=1
+                plex_css.CssValue{(!CYCLIC REFERENCE!)}
+              ],
+              Important: bool(false),
+            },
+          },
+          children: []plex.StyledNode [ #len=2,cap=2
+            plex.StyledNode{(!CYCLIC REFERENCE!)}
+            plex.StyledNode{(!CYCLIC REFERENCE!)}
+          ],
+        },
+      ],
+      children: []plex.LayoutBox [ #len=1,cap=1
+        plex.LayoutBox {
+          dimensions: plex.Dimensions {
+            Content: sdl.FRect {
+              X: float32(0),
+              Y: float32(0),
+              W: float32(0),
+              H: float32(0),
+            },
+            Padding: plex.EdgeSizes {
+              Left: float32(0),
+              Right: float32(0),
+              Top: float32(0),
+              Bottom: float32(0),
+            },
+            Border: plex.EdgeSizes {
+              Left: float32(0),
+              Right: float32(0),
+              Top: float32(0),
+              Bottom: float32(0),
+            },
+            Margin: plex.EdgeSizes {
+              Left: float32(0),
+              Right: float32(0),
+              Top: float32(0),
+              Bottom: float32(0),
+            },
+          },
+          boxType: plex.BoxType(2),
+          node: optional.Option[visualsource/plex/internal/core.StyledNode] [ #len=0,cap=0
+          ],
+          children: []plex.LayoutBox [ #len=0,cap=0
+          ],
+        },
+      ],
+    },
+  ],
+},

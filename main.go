@@ -10,6 +10,7 @@ import (
 
 	"github.com/gookit/goutil/dump"
 	"github.com/veandco/go-sdl2/sdl"
+	"github.com/veandco/go-sdl2/ttf"
 )
 
 const (
@@ -25,7 +26,7 @@ func parseArgs() string {
 	var htmlDocumentPath string = ""
 	var debug bool
 
-	flag.StringVar(&htmlDocumentPath, "o", "open", "Specify docuemnt to open")
+	flag.StringVar(&htmlDocumentPath, "o", "./test.html", "Specify docuemnt to open")
 	flag.BoolVar(&debug, "debug", true, "Specify debug flag")
 
 	flag.Parse()
@@ -40,9 +41,9 @@ func parseArgs() string {
 }
 
 func run() int {
-
 	htmlFile := parseArgs()
 
+	//var fontCache = plex.FontCache{}
 	var window *sdl.Window
 	var renderer *sdl.Renderer
 	var err error
@@ -52,6 +53,24 @@ func run() int {
 		fmt.Fprintf(os.Stderr, "Failed to load stylesheet %s\n", err)
 		return 1
 	}
+
+	sdl.Do(func() {
+		err = ttf.Init()
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to init ttf %s\n", err)
+		return 1
+	}
+	defer ttf.Quit()
+
+	/*sdl.Do(func() {
+		err = sdl.Init(sdl.INIT_EVERYTHING)
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to init sdl %s\n", err)
+		return 1
+	}
+	defer sdl.Quit()*/
 
 	sdl.Do(func() {
 		window, err = sdl.CreateWindow(
@@ -91,11 +110,34 @@ func run() int {
 
 	if htmlFile != "" {
 		sdl.Do(func() {
+			/*font, err := ttf.OpenFont("./resources/Ubuntu-Medium.ttf", 32)
+			if err == nil {
+				defer font.Close()
 
+				surface, err := font.RenderUTF8Blended("Test", sdl.Color{R: 255, G: 255, B: 255})
+				if err == nil {
+					defer surface.Free()
+					texture, err := renderer.CreateTextureFromSurface(surface)
+					if err == nil {
+						defer texture.Destroy()
+						err = renderer.Copy(texture, nil, &sdl.Rect{X: 0, Y: 0, W: surface.W, H: surface.H})
+						if err != nil {
+							fmt.Fprintf(os.Stderr, "Failed Copy %s\n", err)
+						}
+						renderer.Present()
+					} else {
+						fmt.Fprintf(os.Stderr, "Failed CreateTextureFromSurface %s\n", err)
+					}
+				} else {
+					fmt.Fprintf(os.Stderr, "Failed RenderUTF8Blende %s\n", err)
+				}
+			} else {
+				fmt.Fprintf(os.Stderr, "Failed OpenFont %s\n", err)
+			}*/
 			err = plex.LoadLocalHtmlDocument(htmlFile, renderer, []plex_css.Stylesheet{stylesheet})
 		})
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to load html document %s\n", err)
+			fmt.Fprintf(os.Stderr, "Failed to font %s\n", err)
 			return 1
 		}
 	}
@@ -134,58 +176,9 @@ func main() {
 
 	sdl.Main(func() {
 		exitcode = run()
+		ttf.Quit()
+		sdl.Quit()
 	})
 
 	os.Exit(exitcode)
 }
-
-/*dump.Config(func(opts *dump.Options) {
-	opts.MaxDepth = 10
-})
-
-stylesheet, err := plex.LoadLocalStylesheet("./resources/useragent.css")
-if err != nil {
-	panic(err)
-}
-
-if err = sdl.Init(sdl.INIT_EVERYTHING); err != nil {
-	panic(err)
-}
-defer sdl.Quit()
-
-window, err := sdl.CreateWindow("Plex", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, 800, 600, sdl.WINDOW_SHOWN)
-if err != nil {
-	panic(err)
-}
-defer window.Destroy()
-
-renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
-if err != nil {
-	panic(err)
-}
-
-err = plex.LoadLocalHtmlDocument("./test.html", renderer, []plex_css.Stylesheet{stylesheet})
-
-if err != nil {
-	fmt.Printf("Render Error: %s", err)
-}
-
-running := true
-for running {
-	for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-		switch t := event.(type) {
-		case *sdl.QuitEvent:
-			println("Quit")
-			running = false
-		case *sdl.KeyboardEvent:
-			if t.Keysym.Sym == sdl.K_F5 && t.State == sdl.RELEASED {
-				fmt.Println("Reloading html Document")
-				err = plex.LoadLocalHtmlDocument("./test.html", renderer, []plex_css.Stylesheet{stylesheet})
-				if err != nil {
-					fmt.Printf("Render Error: %s", err)
-				}
-			}
-		}
-	}
-	sdl.Delay(33)
-}*/

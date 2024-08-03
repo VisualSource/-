@@ -2,6 +2,7 @@ package plex
 
 // https://github.com/moznion/go-optional
 import (
+	"fmt"
 	plex_css "visualsource/plex/internal/css"
 
 	"github.com/moznion/go-optional"
@@ -73,6 +74,7 @@ func (l *LayoutBox) calcuateInlineWidth(containing Dimensions) {
 		}
 	}
 
+	l.dimensions.Content.W = total
 	l.dimensions.Padding.Left = plex_css.ResolveDimentionToPXFloat(paddingLeft)
 	l.dimensions.Padding.Right = plex_css.ResolveDimentionToPXFloat(paddingRight)
 	l.dimensions.Border.Left = plex_css.ResolveDimentionToPXFloat(borderLeft)
@@ -86,7 +88,31 @@ func (l *LayoutBox) calcuateInlineHeight() {
 	// based on font size
 }
 
-func (l *LayoutBox) calcuateInlinePosition(containing Dimensions) {}
+func (l *LayoutBox) calcuateInlinePosition(containing Dimensions) {
+	style := l.node.Unwrap()
+	zero := plex_css.CreateCssDimention(0, plex_css.CssUnit_PX)
+
+	l.dimensions.Margin.Top = style.props.ResolveLookupAsDimention("margin-top", "margin").Or(zero).UnwrapAsPtr().AsPx()
+	l.dimensions.Margin.Bottom = style.props.ResolveLookupAsDimention("margin-bottom", "margin").Or(zero).UnwrapAsPtr().AsPx()
+
+	l.dimensions.Border.Top = style.props.ResolveLookupAsDimention("border-top-width", "border-width").Or(zero).UnwrapAsPtr().AsPx()
+	l.dimensions.Border.Bottom = style.props.ResolveLookupAsDimention("border-bottom-width", "border-with").Or(zero).UnwrapAsPtr().AsPx()
+
+	l.dimensions.Padding.Top = style.props.ResolveLookupAsDimention("padding-top", "padding").Or(zero).UnwrapAsPtr().AsPx()
+	l.dimensions.Padding.Bottom = style.props.ResolveLookupAsDimention("padding-bottom", "padding").Or(zero).UnwrapAsPtr().AsPx()
+
+	l.dimensions.Content.H = 32
+	/*l.dimensions.Content.X = containing.Content.X +
+		l.dimensions.Margin.Left +
+		l.dimensions.Border.Left +
+		l.dimensions.Padding.Left
+
+	l.dimensions.Content.Y = containing.Content.H +
+		containing.Content.Y +
+		l.dimensions.Margin.Top +
+		l.dimensions.Border.Top +
+		l.dimensions.Padding.Top*/
+}
 
 // Lay out a block-level element and its descendants.
 func (l *LayoutBox) layoutBlock(containing Dimensions) {
@@ -125,7 +151,6 @@ func (l *LayoutBox) calculateBlockPosition(containing Dimensions) {
 	style := l.node.Unwrap()
 	zero := plex_css.CreateCssDimention(0, plex_css.CssUnit_PX)
 
-	style.props.Lookup("margin-top", "margin")
 	l.dimensions.Margin.Top = style.props.ResolveLookupAsDimention("margin-top", "margin").Or(zero).UnwrapAsPtr().AsPx()
 	l.dimensions.Margin.Bottom = style.props.ResolveLookupAsDimention("margin-bottom", "margin").Or(zero).UnwrapAsPtr().AsPx()
 
@@ -265,7 +290,7 @@ func (l *LayoutBox) calculateBlockWidth(containing Dimensions) {
 	l.dimensions.Margin.Right = plex_css.ResolveDimentionToPXFloat(marginRight)
 }
 
-func (l *LayoutBox) getInlineContainer() *LayoutBox {
+func (l *LayoutBox) appendInlineContainer(item LayoutBox) {
 
 	switch l.boxType {
 	case BoxType_Block:
@@ -283,9 +308,9 @@ func (l *LayoutBox) getInlineContainer() *LayoutBox {
 
 		last := l.children[len(l.children)-1]
 
-		return &last
+		last.children = append(last.children, item)
 	default:
-		return l
+		l.children = append(l.children, item)
 	}
 }
 
@@ -306,8 +331,10 @@ func LayoutTree(node StyledNode, containing Dimensions) LayoutBox {
 
 func buildLayoutTree(node StyledNode) LayoutBox {
 
-	boxType := DisplayTypeToBoxType(node.GetDisplay())
-
+	boxType, err := node.GetDisplay().ToBoxType()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create node: %s\n", err))
+	}
 	root := createNewLayoutBox(boxType, Dimensions{}, optional.Some(node))
 
 	for _, child := range node.children {
@@ -316,9 +343,7 @@ func buildLayoutTree(node StyledNode) LayoutBox {
 			item := buildLayoutTree(child)
 			root.children = append(root.children, item)
 		case DisplayType_Inline:
-			inline := root.getInlineContainer()
-			item := buildLayoutTree(child)
-			inline.children = append(inline.children, item)
+			root.appendInlineContainer(buildLayoutTree(child))
 		}
 	}
 

@@ -1,23 +1,38 @@
 package plex
 
-import "github.com/veandco/go-sdl2/sdl"
+import (
+	"fmt"
 
-type BoxType = uint8
-type DisplayType = uint8
+	"github.com/veandco/go-sdl2/sdl"
+)
+
+type BoxType uint8
+type DisplayType uint8
 
 // #region-start CONTS
 
 const (
-	BoxType_Block          BoxType = 0
-	BoxType_Inline         BoxType = 1
-	BoxType_AnonymousBlock BoxType = 2
+	BoxType_Block BoxType = iota
+	BoxType_Inline
+	BoxType_AnonymousBlock
 )
 
 const (
-	DisplayType_Inline DisplayType = 0
-	DisplayType_Block  DisplayType = 1
-	DisplayType_None   DisplayType = 2
+	DisplayType_Inline DisplayType = iota
+	DisplayType_Block
+	DisplayType_None
 )
+
+func (b DisplayType) ToBoxType() (BoxType, error) {
+	switch b {
+	case DisplayType_Block:
+		return BoxType_Block, nil
+	case DisplayType_Inline:
+		return BoxType_Inline, nil
+	default:
+		return 255, fmt.Errorf("can not convert for display type of 'none'")
+	}
+}
 
 type EdgeSizes struct {
 	Left   float32
@@ -65,16 +80,5 @@ func expandedBy(rect sdl.FRect, edge EdgeSizes) sdl.FRect {
 		Y: rect.Y - edge.Top,
 		W: rect.W + edge.Left + edge.Right,
 		H: rect.H + edge.Top + edge.Bottom,
-	}
-}
-
-func DisplayTypeToBoxType(display DisplayType) BoxType {
-	switch display {
-	case DisplayType_Block:
-		return BoxType_Block
-	case DisplayType_Inline:
-		return BoxType_Inline
-	default:
-		panic("root node has display none")
 	}
 }
